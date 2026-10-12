@@ -13,6 +13,7 @@ import com.shadow306.app.core.engine.video.VideoEngine
 import com.shadow306.app.core.modeldownload.ModelRepository
 import com.shadow306.app.core.modeldownload.ModelSpec
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 /**
  * Use cases - thin orchestration layer between ViewModels and engines.
@@ -33,7 +34,7 @@ class GetEngineStatusUseCase(
 
     suspend fun invoke(): EngineStatus {
         val state = repository.state.value
-        val modeStr = kotlinx.coroutines.flow.first(prefs.engineModeFlow)
+        val modeStr = prefs.engineModeFlow.first()
         val mode = when (modeStr) {
             "onnx" -> EngineMode.ONNX
             "fallback" -> EngineMode.FALLBACK
@@ -50,7 +51,7 @@ class GetEngineStatusUseCase(
 
         return EngineStatus(
             mode = mode,
-            isReady = state.isComplete,
+            isReady = state.isReady,
             installedCount = state.installedCount,
             totalCount = state.totalCount,
             requiredFeatures = featureMap
@@ -61,94 +62,39 @@ class GetEngineStatusUseCase(
 class TryOnUseCase(
     private val engine: TryOnEngine
 ) {
-    suspend fun invoke(
-        person: Bitmap,
-        garment: Bitmap,
-        fit: Int,
-        matchShadow: Boolean,
-        mode: EngineMode
-    ): TryOnEngine.Result {
-        return engine.tryOn(
-            person, garment,
-            TryOnEngine.Params(fitTightness = fit, matchShadow = matchShadow),
-            mode
-        )
+    suspend fun invoke(person: Bitmap, garment: Bitmap, mode: EngineMode = EngineMode.AUTO): Bitmap {
+        return engine.tryOn(person, garment, mode)
     }
 }
 
 class FaceSwapUseCase(
     private val engine: FaceEngine
 ) {
-    suspend fun invoke(
-        target: Bitmap,
-        source: Bitmap,
-        colorMatch: Boolean,
-        feather: Int,
-        mode: EngineMode
-    ): FaceEngine.Result {
-        return engine.swap(
-            target, source,
-            FaceEngine.Params(colorMatch = colorMatch, feather = feather),
-            mode
-        )
-    }
-}
-
-class VideoGenUseCase(
-    private val engine: VideoEngine
-) {
-    fun invoke(
-        source: Bitmap,
-        prompt: String,
-        durationSec: Int,
-        fps: Int,
-        motion: Int,
-        mode: EngineMode
-    ): Flow<VideoEngine.Progress> {
-        return engine.generate(
-            source,
-            VideoEngine.Params(
-                prompt = prompt,
-                durationSec = durationSec,
-                fps = fps,
-                motionStrength = motion
-            ),
-            mode
-        )
+    suspend fun invoke(source: Bitmap, target: Bitmap, mode: EngineMode = EngineMode.AUTO): Bitmap {
+        return engine.swap(source, target, mode)
     }
 }
 
 class RemovalUseCase(
     private val engine: RemovalEngine
 ) {
-    suspend fun invoke(
-        image: Bitmap,
-        mask: Bitmap?,
-        sensitivity: Int,
-        skinMatch: Boolean,
-        mode: EngineMode
-    ): RemovalEngine.Result {
-        return engine.remove(
-            image, mask,
-            RemovalEngine.Params(sensitivity = sensitivity, skinMatch = skinMatch),
-            mode
-        )
+    suspend fun invoke(image: Bitmap, mode: EngineMode = EngineMode.AUTO): Bitmap {
+        return engine.remove(image, mode)
+    }
+}
+
+class VideoGenUseCase(
+    private val engine: VideoEngine
+) {
+    suspend fun invoke(image: Bitmap, prompt: String, mode: EngineMode = EngineMode.AUTO): String {
+        return engine.generate(image, prompt, mode)
     }
 }
 
 class TemplateUseCase(
     private val store: TemplateStore
 ) {
-    suspend fun load() = store.load()
-    fun flow() = store.templatesFlow
-    suspend fun add(uri: Uri, context: Context, name: String, category: String): Result<com.shadow306.app.core.data.db.TemplateItem> {
-        // Copy uri to temp file first
-        val temp = java.io.File(context.cacheDir, "import_${System.currentTimeMillis()}.jpg")
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            temp.outputStream().use { out -> input.copyTo(out) }
-        }
-        val cat = com.shadow306.app.core.data.db.TemplateItem.categoryFromString(category)
-        return store.addFromFile(temp, name, cat)
-    }
-    suspend fun delete(id: String) = store.delete(id)
+    fun getTemplates(): Flow<List<com.shadow306.app.core.data.db.TemplateEntity>> = store.templatesFlow
+    suspend fun addTemplate(name: String, uri: Uri, context: Context) = store.addTemplate(name, uri, context)
+    suspend fun deleteTemplate(id: Long) = store.deleteTemplate(id)
 }
