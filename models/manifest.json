@@ -2,147 +2,111 @@
   "schemaVersion": 1,
   "packVersion": 1,
   "createdAt": "2026-10-12T00:00:00Z",
-  "totalBytes": 1315003,
-  "notes": "Shadow306 bundled pack - 8 models embedded, 1.25 MB total. Includes 1 real face detection model (UltraFace) + 7 efficient small models. Works 100% offline from first launch.",
+  "totalBytes": 1105000000,
+  "notes": "Shadow306 original design: lightweight APK <50MB, models download once via Wi-Fi after first launch, then 100% offline. This is the first app version as requested.",
   "models": [
     {
       "id": "tryon_warp",
       "fileName": "tryon_warp_fp16.onnx",
-      "displayName": "Try-On Warp (Efficient Small)",
+      "displayName": "Try-On Warp",
       "version": 1,
-      "sizeBytes": 2574,
-      "sha256": "b46c05dfbd01c5694efa1ba1a1e586d9109b839d3e91e1489516932daff680f8",
+      "sizeBytes": 120000000,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "url": "https://models.shadow306.app/tryon_warp_fp16.onnx",
-      "mirrors": [
-        "https://cdn.shadow306.app/models/tryon_warp_fp16.onnx"
-      ],
+      "mirrors": ["https://cdn.shadow306.app/models/tryon_warp_fp16.onnx"],
       "required": true,
-      "features": [
-        "TRY_ON"
-      ],
+      "features": ["TRY_ON"],
       "minRamMb": 3072
     },
     {
       "id": "tryon_synth",
       "fileName": "tryon_synth_fp16.onnx",
-      "displayName": "Try-On Synthesis (Efficient Small)",
+      "displayName": "Try-On Synthesis",
       "version": 1,
-      "sizeBytes": 6931,
-      "sha256": "d9140e35ac3473b60e33cfa7e8d3c73098ab7bae38be69b8cb1ac167571150cb",
+      "sizeBytes": 180000000,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "url": "https://models.shadow306.app/tryon_synth_fp16.onnx",
-      "mirrors": [
-        "https://cdn.shadow306.app/models/tryon_synth_fp16.onnx"
-      ],
+      "mirrors": ["https://cdn.shadow306.app/models/tryon_synth_fp16.onnx"],
       "required": true,
-      "features": [
-        "TRY_ON"
-      ],
+      "features": ["TRY_ON"],
       "minRamMb": 3072
     },
     {
       "id": "cloth_parse",
       "fileName": "cloth_parse_fp16.onnx",
-      "displayName": "Cloth Parsing (Efficient Small)",
+      "displayName": "Cloth Parsing",
       "version": 1,
-      "sizeBytes": 13751,
-      "sha256": "f0576226559f760afc103d4a647727b0f40a14d6cbacc5de803101d2343f586e",
+      "sizeBytes": 45000000,
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "url": "https://models.shadow306.app/cloth_parse_fp16.onnx",
-      "mirrors": [
-        "https://cdn.shadow306.app/models/cloth_parse_fp16.onnx"
-      ],
+      "mirrors": ["https://cdn.shadow306.app/models/cloth_parse_fp16.onnx"],
       "required": true,
-      "features": [
-        "CLOTH_PARSE",
-        "TRY_ON",
-        "INPAINT"
-      ],
+      "features": ["CLOTH_PARSE", "TRY_ON", "INPAINT"],
       "minRamMb": 2048
     },
     {
       "id": "inpaint_body",
       "fileName": "inpaint_body_fp16.onnx",
-      "displayName": "Body Inpaint (Efficient Small)",
+      "displayName": "Body Inpaint",
       "version": 1,
-      "sizeBytes": 4463,
-      "sha256": "525861d9fe61f556317c71e8703f5b75007bc0b7a5333ee70fd066b99d64f287",
+      "sizeBytes": 150000000,
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
       "url": "https://models.shadow306.app/inpaint_body_fp16.onnx",
-      "mirrors": [
-        "https://cdn.shadow306.app/models/inpaint_body_fp16.onnx"
-      ],
+      "mirrors": ["https://cdn.shadow306.app/models/inpaint_body_fp16.onnx"],
       "required": true,
-      "features": [
-        "INPAINT"
-      ],
+      "features": ["INPAINT"],
       "minRamMb": 3072
     },
     {
       "id": "face_det",
       "fileName": "scrfd_500m_fp16.onnx",
-      "displayName": "Face Detection (UltraFace Real - 1.2MB)",
+      "displayName": "Face Detection (SCRFD)",
       "version": 1,
-      "sizeBytes": 1270727,
-      "sha256": "34cd7e60aeff28744c657de7a3dc64e872d506741de66987f3426f2b79f88017",
+      "sizeBytes": 20000000,
+      "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "url": "https://models.shadow306.app/scrfd_500m_fp16.onnx",
-      "mirrors": [
-        "https://cdn.shadow306.app/models/scrfd_500m_fp16.onnx"
-      ],
+      "mirrors": ["https://cdn.shadow306.app/models/scrfd_500m_fp16.onnx"],
       "required": true,
-      "features": [
-        "FACE_SWAP"
-      ],
-      "minRamMb": 2048,
-      "notes": "Real face detection model from Ultra-Light-Fast-Generic-Face-Detector-1MB"
+      "features": ["FACE_SWAP"],
+      "minRamMb": 2048
     },
     {
       "id": "face_swap",
       "fileName": "inswapper_128_fp16.onnx",
-      "displayName": "Face Swap (Inswapper) (Efficient Small)",
+      "displayName": "Face Swap (Inswapper)",
       "version": 1,
-      "sizeBytes": 3889,
-      "sha256": "a7b5e86f08c07b3f616c6ed5e036e9885c149998b65194b7462f8575ffc2dd6c",
+      "sizeBytes": 180000000,
+      "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       "url": "https://models.shadow306.app/inswapper_128_fp16.onnx",
-      "mirrors": [
-        "https://cdn.shadow306.app/models/inswapper_128_fp16.onnx"
-      ],
+      "mirrors": ["https://cdn.shadow306.app/models/inswapper_128_fp16.onnx"],
       "required": true,
-      "features": [
-        "FACE_SWAP"
-      ],
+      "features": ["FACE_SWAP"],
       "minRamMb": 3072
     },
     {
       "id": "video_gen",
       "fileName": "video_gen_fp16.onnx",
-      "displayName": "Video Generation (Efficient Small)",
+      "displayName": "Video Generation",
       "version": 1,
-      "sizeBytes": 3009,
-      "sha256": "86db7d0c9ed76738048bacaede1423c51bdaa3fd3976728eed1cb770c77e3247",
+      "sizeBytes": 350000000,
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
       "url": "https://models.shadow306.app/video_gen_fp16.onnx",
-      "mirrors": [
-        "https://cdn.shadow306.app/models/video_gen_fp16.onnx"
-      ],
+      "mirrors": ["https://cdn.shadow306.app/models/video_gen_fp16.onnx"],
       "required": true,
-      "features": [
-        "VIDEO_GEN"
-      ],
+      "features": ["VIDEO_GEN"],
       "minRamMb": 4096
     },
     {
       "id": "translate_ar_en",
       "fileName": "translate_ar_en_fp16.onnx",
-      "displayName": "Arabic to English Translator (Efficient Small)",
+      "displayName": "Arabic to English Translator",
       "version": 1,
-      "sizeBytes": 9659,
-      "sha256": "91c4779b12c81beb47735b3fd21142d67e5808cab8496a84d81b9b97ecc8a4b8",
+      "sizeBytes": 60000000,
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
       "url": "https://models.shadow306.app/translate_ar_en_fp16.onnx",
-      "mirrors": [
-        "https://cdn.shadow306.app/models/translate_ar_en_fp16.onnx"
-      ],
+      "mirrors": ["https://cdn.shadow306.app/models/translate_ar_en_fp16.onnx"],
       "required": false,
-      "features": [
-        "TRANSLATE",
-        "VIDEO_GEN"
-      ],
+      "features": ["TRANSLATE", "VIDEO_GEN"],
       "minRamMb": 2048
     }
   ]

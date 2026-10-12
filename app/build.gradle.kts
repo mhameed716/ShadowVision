@@ -15,10 +15,6 @@ android {
         versionName = "1.0.0"
 
         resourceConfigurations += setOf("en", "ar")
-
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
     }
 
     buildTypes {
@@ -79,7 +75,7 @@ android {
     lint {
         abortOnError = false
         checkReleaseBuilds = false
-        disable += setOf("MissingTranslation", "ExtraTranslation", "UnusedResources")
+        disable += setOf("MissingTranslation", "ExtraTranslation")
     }
 }
 

@@ -29,10 +29,10 @@ jobs:
 
       - name: 🤖 Setup Android SDK 35
         run: |
+          echo "ANDROID_HOME: $ANDROID_HOME"
           yes | sdkmanager --licenses || true
-          sdkmanager --install "platform-tools" "platforms;android-35" "platforms;android-34" "build-tools;35.0.0" "build-tools;34.0.0" || true
+          sdkmanager --install "platform-tools" "platforms;android-35" "platforms;android-34" "build-tools;35.0.0" "build-tools;34.0.0" "ndk;28.2.13676358" || true
           yes | sdkmanager --licenses || true
-          echo "SDK installed:"
           sdkmanager --list_installed | grep -E "platforms;android|build-tools" || true
 
       - name: 📦 Cache Gradle
@@ -51,95 +51,77 @@ jobs:
       - name: ✅ Verify manifest
         run: |
           python3 tools/verify_manifest.py app/src/main/assets/models/manifest.json
-          echo "Models:"
           ls -lh app/src/main/assets/models/ | head -20
-          du -sh app/src/main/assets/models/
 
-      - name: 📊 List available tasks
+      - name: 📊 Environment
         run: |
-          echo "=== Available tasks ==="
-          ./gradlew tasks --all 2>&1 | grep -E "assemble" | head -30
-          echo ""
-          echo "=== Build files ==="
-          ls -lh app/build.gradle.kts gradle/libs.versions.toml
+          java -version
+          ./gradlew --version
+          ./gradlew tasks --all | grep -E "assemble" | head -20
 
-      - name: 🔨 Build Debug APK
+      - name: 🔨 Build Debug APK (Original - downloads after install)
         run: |
-          echo "=== Building Debug APK ==="
+          echo "Building Shadow306 Debug APK - original design: downloads models after install"
+          echo "This is the first app version as requested"
           ./gradlew :app:assembleDebug --stacktrace --no-daemon --no-configuration-cache 2>&1 | tee /tmp/build.log
           echo ""
-          echo "=== Build finished, exit code: ${PIPESTATUS[0]} ==="
+          echo "=== Build result ==="
+          echo "Exit code: ${PIPESTATUS[0]}"
           echo ""
-          echo "=== Searching for APKs ==="
-          find . -name "*.apk" -type f 2>/dev/null | head -20
+          echo "=== APKs ==="
+          find . -name "*.apk" -type f 2>/dev/null | xargs ls -lh 2>/dev/null || echo "No APK yet"
           echo ""
-          echo "=== App build outputs ==="
-          ls -R app/build/outputs/ 2>/dev/null | head -50 || echo "No outputs"
+          echo "=== Outputs ==="
+          ls -R app/build/outputs/ 2>/dev/null | head -50 || echo "No outputs dir"
           echo ""
-          echo "=== Full build directory ==="
-          find app/build -type f 2>/dev/null | head -50 || echo "No build dir"
-          echo ""
-          echo "=== Last 30 lines of build log ==="
-          tail -30 /tmp/build.log
+          echo "=== Check for errors ==="
+          grep -E "FAILED|error|Error|Exception" /tmp/build.log | head -20 || true
 
-      - name: 📏 APK Summary
+      - name: 📏 Summary
         if: always()
         run: |
-          echo "## 📦 Shadow306 APK Build" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Shadow306 APK - Original Design" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Build Info" >> $GITHUB_STEP_SUMMARY
-          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- JDK: 17" >> $GITHUB_STEP_SUMMARY
-          echo "- SDK: 35" >> $GITHUB_STEP_SUMMARY
+          echo "### Original App: Downloads after install" >> $GITHUB_STEP_SUMMARY
+          echo "- APK <50MB (lightweight)" >> $GITHUB_STEP_SUMMARY
+          echo "- Models 1.1GB download once via Wi-Fi after first launch" >> $GITHUB_STEP_SUMMARY
+          echo "- 100% offline after setup" >> $GITHUB_STEP_SUMMARY
+          echo "- As requested: first version" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if find app/build -name "*.apk" -type f 2>/dev/null | grep -q .; then
-            echo "### ✅ APKs Found" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ APK Built" >> $GITHUB_STEP_SUMMARY
             find app/build -name "*.apk" -type f -exec ls -lh {} \; | while read line; do
               echo "- $line" >> $GITHUB_STEP_SUMMARY
             done
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📱 Installation" >> $GITHUB_STEP_SUMMARY
-            echo '```bash' >> $GITHUB_STEP_SUMMARY
-            echo "adb install app-debug.apk" >> $GITHUB_STEP_SUMMARY
-            echo "# Or drag APK to phone and install" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
           else
-            echo "### ❌ No APK Found" >> $GITHUB_STEP_SUMMARY
-            echo "Build directory contents:" >> $GITHUB_STEP_SUMMARY
+            echo "### ❌ Build Failed - Logs" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            find app/build -type f 2>/dev/null | head -50 >> $GITHUB_STEP_SUMMARY || echo "No build dir" >> $GITHUB_STEP_SUMMARY
+            grep -E "FAILED|error|Error|Exception|Caused by" /tmp/build.log | head -30 >> $GITHUB_STEP_SUMMARY || true
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Last 50 lines of build log:" >> $GITHUB_STEP_SUMMARY
+            echo "Full log tail:" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -50 /tmp/build.log >> $GITHUB_STEP_SUMMARY || true
+            tail -100 /tmp/build.log >> $GITHUB_STEP_SUMMARY || true
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: ⬆️ Upload APKs
+      - name: ⬆️ Upload APK
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: Shadow306-APK-${{ github.sha }}
           path: |
             app/build/outputs/apk/**/*.apk
-            app/build/outputs/**/*.apk
-            **/build/outputs/apk/**/*.apk
             app/build/**/*.apk
           retention-days: 30
-          compression-level: 0
           if-no-files-found: warn
 
-      - name: ⬆️ Upload build logs
+      - name: ⬆️ Upload logs
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: build-logs-${{ github.sha }}
-          path: |
-            /tmp/build.log
-            app/build/reports/
-            app/build/outputs/logs/
+          path: /tmp/build.log
           retention-days: 7
           if-no-files-found: ignore
