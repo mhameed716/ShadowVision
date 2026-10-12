@@ -34,37 +34,33 @@ jobs:
         run: |
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
           EXIT_CODE=${PIPESTATUS[0]}
-          echo "=== Last 100 lines ==="
+          echo "=== EXIT $EXIT_CODE ==="
           tail -100 /tmp/build.log
-          echo ""
-          echo "=== Errors ==="
-          grep -i -E "error|FAILED|exception|e: " /tmp/build.log | head -50 || echo "No errors"
           exit $EXIT_CODE
 
-      - name: 📤 Save log to repo on failure
+      - name: 📤 Save log via API on failure
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Build failed, saving log to repo for debugging"
-          mkdir -p /tmp/logdir
-          cp /tmp/build.log /tmp/logdir/build-${{ github.sha }}.log
-          tail -200 /tmp/build.log > /tmp/logdir/last-failure.log
-          echo "## Build failure ${{ github.sha }}" > /tmp/logdir/README.md
-          echo "" >> /tmp/logdir/README.md
-          echo '```' >> /tmp/logdir/README.md
-          tail -200 /tmp/build.log >> /tmp/logdir/README.md
-          echo '```' >> /tmp/logdir/README.md
-          # Configure git
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          # Create orphan branch for logs
-          git checkout --orphan build-logs-temp || git checkout -b build-logs-temp
-          git rm -rf . || true
-          cp /tmp/logdir/* . || true
-          cp /tmp/build.log ./full.log || true
-          git add .
-          git commit -m "build log ${{ github.sha }}" || echo "No changes"
-          git push origin build-logs-temp:build-logs --force || echo "Push failed"
-          echo "Log pushed to build-logs branch"
+          echo "Saving log via GitHub API"
+          # Encode log as base64
+          base64 -w 0 /tmp/build.log > /tmp/b64.log || base64 /tmp/build.log > /tmp/b64.log
+          # Create file in repo via API on a new branch
+          # First get current commit sha
+          SHA=$(git rev-parse HEAD)
+          echo "Current SHA: $SHA"
+          # Try to create file via API
+          gh api repos/mhameed716/ShadowVision/contents/build-failure-${{ github.sha }}.log \
+            -f message="build log ${{ github.sha }}" \
+            -f content="$(cat /tmp/b64.log)" \
+            -f branch="arena/529f00d7-shadowvision" \
+            --method PUT || echo "API create failed"
+          # Also try to update summary with full log
+          echo "## ❌ Build Failed" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -300 /tmp/build.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: ⬆️ Upload APK
         if: always()
