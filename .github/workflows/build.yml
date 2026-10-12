@@ -3,13 +3,11 @@ name: Build Shadow306 APK
 on:
   push:
     branches: [ main, arena/**, develop ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build APK (Original - Download After Install)
+    name: Build APK (Original)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -32,80 +30,58 @@ jobs:
       - name: 🔧 Grant execute
         run: chmod +x gradlew
 
-      - name: ✅ Verify manifest + Icon
-        run: |
-          echo "=== Manifest ==="
-          cat app/src/main/assets/models/manifest.json | head -20
-          echo ""
-          echo "=== Icon ==="
-          ls -lh app/src/main/res/drawable/ic_launcher_foreground.xml
-          ls -lh app/src/main/res/mipmap-anydpi-v26/
-          echo ""
-          echo "=== Assets ==="
-          ls -lh app/src/main/assets/models/
-
       - name: 🔨 Build Debug APK
+        id: build
         run: |
-          echo "=== Clean ==="
-          ./gradlew clean --no-daemon 2>&1 | tail -5
-          echo ""
-          echo "=== Build with rerun-tasks ==="
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon --rerun-tasks 2>&1 | tee /tmp/build.log
+          echo "=== Building Shadow306 Original - APK <50MB, downloads after install ==="
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
           EXIT_CODE=${PIPESTATUS[0]}
+          echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_OUTPUT
           echo ""
-          echo "=== Exit code: $EXIT_CODE ==="
+          echo "=== APKs ==="
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; 2>/dev/null || echo "No APK"
           echo ""
-          echo "=== Find APKs everywhere ==="
-          find . -type f -name "*.apk" 2>/dev/null | xargs ls -lh 2>/dev/null || echo "No APK anywhere"
+          echo "=== Last 50 lines ==="
+          tail -50 /tmp/build.log
           echo ""
-          echo "=== app/build ==="
-          ls -R app/build 2>/dev/null | head -100 || echo "No build dir"
-          echo ""
-          echo "=== Last 30 lines ==="
-          tail -30 /tmp/build.log
+          echo "=== Errors ==="
+          grep -i -E "error|FAILED|exception|e: " /tmp/build.log | head -30 || echo "No errors grep"
           exit $EXIT_CODE
 
-      - name: 📏 Summary
-        if: always()
+      - name: 📏 Summary on failure
+        if: failure()
         run: |
-          echo "## 📦 Shadow306 APK - Original Design" >> $GITHUB_STEP_SUMMARY
+          echo "## ❌ Build Failed - Shadow306" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "APK <50MB, models download after install, then 100% offline" >> $GITHUB_STEP_SUMMARY
-          echo "Icon: shadow crescent + AI dot adaptive" >> $GITHUB_STEP_SUMMARY
+          echo "### Error log" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -i -E "error|FAILED|exception|e: |Execution failed" /tmp/build.log | head -100 >> $GITHUB_STEP_SUMMARY || tail -100 /tmp/build.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if find app/build -name "*.apk" -type f | grep -q .; then
-            echo "### ✅ SUCCESS - APK Built" >> $GITHUB_STEP_SUMMARY
-            find app/build -name "*.apk" -type f -exec ls -lh {} \; | while read l; do echo "- $l" >> $GITHUB_STEP_SUMMARY; done
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Download from Artifacts below" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "### ❌ FAILED - No APK" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Build dir structure" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            ls -R app/build 2>/dev/null | head -150 >> $GITHUB_STEP_SUMMARY || echo "No build dir" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Last 150 lines of log" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -150 /tmp/build.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Errors" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            grep -i -E "error|failed|exception|FAILED" /tmp/build.log | head -50 >> $GITHUB_STEP_SUMMARY || echo "No explicit errors" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "### Full tail" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -200 /tmp/build.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          # Also create annotation
+          ERROR_MSG=$(grep -i -m1 -E "error|FAILED" /tmp/build.log | head -1 | cut -c1-500)
+          echo "::error::$ERROR_MSG"
+
+      - name: 📏 Summary on success
+        if: success()
+        run: |
+          echo "## ✅ Shadow306 APK Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Original design: APK <50MB, models download after install, then 100% offline" >> $GITHUB_STEP_SUMMARY
+          echo "Icon: shadow crescent + purple AI dot" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; | while read l; do echo "- $l" >> $GITHUB_STEP_SUMMARY; done
 
       - name: ⬆️ Upload APK
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: Shadow306-APK-${{ github.sha }}
-          path: |
-            app/build/outputs/apk/**/*.apk
-            app/build/**/*.apk
-            **/*.apk
+          path: app/build/outputs/apk/**/*.apk
           retention-days: 30
           if-no-files-found: warn
 
