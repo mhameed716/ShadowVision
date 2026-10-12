@@ -26,32 +26,66 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
           yes | sdkmanager --licenses || true
+          echo "SDK installed"
 
       - name: 🔧 Grant execute
         run: chmod +x gradlew
 
-      - name: ✅ Verify
-        run: |
-          ls -lh app/src/main/assets/models/
-          ls -lh app/src/main/res/mipmap-hdpi/ || echo "No hdpi"
-          cat app/src/main/res/values/colors.xml | grep ic_launcher_background || echo "Missing background in colors"
-
       - name: 🔨 Build Debug APK
         run: |
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
-          echo "=== APKs ==="
-          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK"
-          echo "=== Build dir ==="
-          ls -R app/build/outputs/ 2>/dev/null | head -20 || echo "No outputs"
-          echo "=== Last 50 ==="
-          tail -50 /tmp/build.log
+          echo "=== Cleaning ==="
+          ./gradlew clean --no-daemon || true
+          echo ""
+          echo "=== Building ==="
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon --info 2>&1 | tee /tmp/build.log
+          echo ""
+          echo "=== Build finished ==="
+          echo "=== Find all APKs ==="
+          find . -name "*.apk" -type f 2>/dev/null | head -20
+          echo ""
+          echo "=== app/build ==="
+          ls -la app/build/ 2>/dev/null || echo "No app/build"
+          echo ""
+          echo "=== app/build/outputs ==="
+          ls -R app/build/outputs/ 2>/dev/null | head -50 || echo "No outputs"
+          echo ""
+          echo "=== app/build/intermediates ==="
+          ls app/build/intermediates/ 2>/dev/null | head -20 || echo "No intermediates"
+          echo ""
+          echo "=== Full app/build file list ==="
+          find app/build -type f 2>/dev/null | head -100 || echo "No files in build"
+          echo ""
+          echo "=== Last 30 lines of log ==="
+          tail -30 /tmp/build.log
+
+      - name: 📏 Summary
+        if: always()
+        run: |
+          echo "## 📦 Shadow306 Build" >> $GITHUB_STEP_SUMMARY
+          if find app/build -name "*.apk" -type f | grep -q .; then
+            echo "### ✅ APK Found" >> $GITHUB_STEP_SUMMARY
+            find app/build -name "*.apk" -type f -exec ls -lh {} \; >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ No APK - Build dir:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            find app/build -type f 2>/dev/null | head -100 >> $GITHUB_STEP_SUMMARY || echo "No build dir" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Last 100 lines" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -100 /tmp/build.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: ⬆️ Upload APK
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: Shadow306-APK-${{ github.sha }}
-          path: app/build/outputs/apk/**/*.apk
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/**/*.apk
+            **/*.apk
           retention-days: 30
           if-no-files-found: warn
 
