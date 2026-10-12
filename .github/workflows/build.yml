@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build APK (Original - Download After Install)
+    name: Build APK (Original)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -26,74 +26,50 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
           yes | sdkmanager --licenses || true
-          echo "SDK installed"
 
       - name: 🔧 Grant execute
         run: chmod +x gradlew
 
       - name: 🔨 Build Debug APK
         run: |
-          echo "=== Cleaning ==="
-          ./gradlew clean --no-daemon || true
-          echo ""
-          echo "=== Building ==="
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon --info 2>&1 | tee /tmp/build.log
-          echo ""
-          echo "=== Build finished ==="
-          echo "=== Find all APKs ==="
-          find . -name "*.apk" -type f 2>/dev/null | head -20
-          echo ""
-          echo "=== app/build ==="
-          ls -la app/build/ 2>/dev/null || echo "No app/build"
-          echo ""
-          echo "=== app/build/outputs ==="
-          ls -R app/build/outputs/ 2>/dev/null | head -50 || echo "No outputs"
-          echo ""
-          echo "=== app/build/intermediates ==="
-          ls app/build/intermediates/ 2>/dev/null | head -20 || echo "No intermediates"
-          echo ""
-          echo "=== Full app/build file list ==="
-          find app/build -type f 2>/dev/null | head -100 || echo "No files in build"
-          echo ""
-          echo "=== Last 30 lines of log ==="
-          tail -30 /tmp/build.log
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
+          echo "=== APKs ==="
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK"
+          echo "=== Build dir files ==="
+          find app/build -type f | head -100 || echo "No build dir"
+          echo "=== Last 50 ==="
+          tail -50 /tmp/build.log
 
-      - name: 📏 Summary
+      - name: 📤 Push log to logs branch
         if: always()
         run: |
-          echo "## 📦 Shadow306 Build" >> $GITHUB_STEP_SUMMARY
-          if find app/build -name "*.apk" -type f | grep -q .; then
-            echo "### ✅ APK Found" >> $GITHUB_STEP_SUMMARY
-            find app/build -name "*.apk" -type f -exec ls -lh {} \; >> $GITHUB_STEP_SUMMARY
-          else
-            echo "### ❌ No APK - Build dir:" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            find app/build -type f 2>/dev/null | head -100 >> $GITHUB_STEP_SUMMARY || echo "No build dir" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Last 100 lines" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -100 /tmp/build.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          # Create logs branch content
+          mkdir -p /tmp/logs
+          cp /tmp/build.log /tmp/logs/build-${{ github.sha }}.log
+          echo "# Build log ${{ github.sha }}" > /tmp/logs/README.md
+          echo "" >> /tmp/logs/README.md
+          echo "Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> /tmp/logs/README.md
+          echo "" >> /tmp/logs/README.md
+          echo '```' >> /tmp/logs/README.md
+          tail -200 /tmp/build.log >> /tmp/logs/README.md
+          echo '```' >> /tmp/logs/README.md
+          # Push to logs branch
+          git fetch origin logs 2>&1 || echo "No logs branch yet"
+          git checkout --orphan logs-temp || git checkout -b logs-temp
+          git rm -rf . 2>&1 || true
+          cp -r /tmp/logs/* . 2>&1 || true
+          cp /tmp/build.log ./full-${{ github.sha }}.log 2>&1 || true
+          git add . 2>&1
+          git commit -m "log ${{ github.sha }}" 2>&1 || echo "Commit failed"
+          git push origin logs-temp:logs --force 2>&1 || echo "Push failed"
 
       - name: ⬆️ Upload APK
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: Shadow306-APK-${{ github.sha }}
-          path: |
-            app/build/outputs/apk/**/*.apk
-            app/build/**/*.apk
-            **/*.apk
+          path: app/build/outputs/apk/**/*.apk
           retention-days: 30
           if-no-files-found: warn
-
-      - name: ⬆️ Upload logs
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: build-logs-${{ github.sha }}
-          path: /tmp/build.log
-          retention-days: 7
-          if-no-files-found: ignore
