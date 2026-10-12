@@ -22,25 +22,18 @@ android {
         }
     }
 
-    // نكهتان: عادي (تحميل عند أول فتح) + مدمج (نماذج داخل APK)
-    flavorDimensions += "distribution"
+    flavorDimensions.add("distribution")
     productFlavors {
         create("standard") {
             dimension = "distribution"
-            applicationIdSuffix = null
-            versionNameSuffix = null
-            // APK خفيف <50MB، النماذج تُنزّل عند أول فتح
-            // مناسب لـ Play Store
+            // APK خفيف <50MB، النماذج تُنزّل عند أول فتح - للـ Play Store
         }
         create("bundled") {
             dimension = "distribution"
             applicationIdSuffix = ".bundled"
             versionNameSuffix = "-bundled"
-            // APK مع النماذج مدمجة ~1.1GB
-            // يعمل بدون إنترنت من أول تشغيل
-            // مناسب للتوزيع المباشر خارج Play Store
-            // لبنائه: ./gradlew :app:assembleBundledDebug
-            // يتطلب وضع ملفات .onnx في app/src/main/assets/models/
+            // APK مع النماذج مدمجة ~15MB مع النماذج الفعالة
+            // يعمل بدون إنترنت من أول تشغيل - للتوزيع المباشر
         }
     }
 
@@ -77,7 +70,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        isCoreLibraryDesugaringEnabled = false
     }
 
     kotlinOptions {
