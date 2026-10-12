@@ -33,21 +33,24 @@ jobs:
         run: |
           set -o pipefail
           rm -rf app/build
-          echo "=== Building ==="
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
           EXIT_CODE=${PIPESTATUS[0]}
-          echo ""
-          echo "=== Exit code: $EXIT_CODE ==="
-          echo ""
-          echo "=== APKs ==="
-          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK found - listing build dir"
-          find app/build -type f | head -100 || echo "No build dir at all"
-          echo ""
-          echo "=== Last 50 ==="
-          tail -50 /tmp/build.log
-          echo ""
-          echo "=== Grep BUILD ==="
-          grep -E "BUILD|assembleDebug|UP-TO-DATE" /tmp/build.log | tail -20
+          echo "Exit code: $EXIT_CODE"
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo ""
+            echo "=== ERRORS ==="
+            grep -i -E "error|FAILED|exception" /tmp/build.log | head -30 || true
+            echo ""
+            echo "=== Last 30 ==="
+            tail -30 /tmp/build.log
+            # Create error annotation with first error
+            ERR=$(grep -m1 -E "e: |error:|FAILED|Execution failed" /tmp/build.log | head -c 1000 || echo "Build failed")
+            echo "::error::$ERR"
+            # Also warning annotations for last lines
+            tail -10 /tmp/build.log | while read line; do
+              echo "::warning::$line"
+            done
+          fi
           exit $EXIT_CODE
 
       - name: ⬆️ Upload APK
