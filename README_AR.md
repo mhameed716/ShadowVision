@@ -100,3 +100,20 @@ adb push models/ /sdcard/Download/Shadow306/models/
 ```
 
 **مبني للخصوصية. مبني للعمل بدون إنترنت. Shadow306 — كل شيء يعمل داخل هاتفك.**
+
+---
+
+## 📦 وضعان للتوزيع
+
+### Standard (للـ Play Store)
+- الحجم: <50MB
+- النماذج تُنزّل عند أول فتح
+- `./gradlew :app:assembleStandardDebug`
+
+### Bundled (بدون إنترنت أبداً)
+- الحجم: ~1.1GB
+- النماذج مدمجة، يعمل فوراً
+- `./gradlew :app:assembleBundledDebug`
+- يتطلب وضع .onnx في `assets/models/`
+
+انظر `docs/BUNDLED_MODE.md`

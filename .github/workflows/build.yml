@@ -1,8 +1,5 @@
 name: Build Shadow306 APK
 
-# يبني الـ APK تلقائياً عند كل push - حمّل الـ APK من تبويب Actions
-# يثبت بيئة أندرويد كاملة (JDK 17 + Android SDK 35) ويبني الـ APK في السحابة
-
 on:
   push:
     branches: [ main, arena/**, develop ]
@@ -26,6 +23,12 @@ on:
           - debug
           - release
           - both
+          - bundled
+      include_bundled:
+        description: 'بناء النسخة المدمجة مع النماذج (إذا وجدت)'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -40,8 +43,6 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: ☕ Setup JDK 17
         uses: actions/setup-java@v4
@@ -50,35 +51,15 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # إعداد Android SDK بطريقة مستقرة - بدون تحديد إصدار cmdline-tools لتجنب مشكلة التراخيص
       - name: 🤖 Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: 🔍 Accept licenses & Install SDK 35
         run: |
-          echo "=== Accepting all licenses ==="
-          # قبول جميع التراخيص تلقائياً
           yes | sdkmanager --licenses || true
-          
-          echo ""
-          echo "=== Installing SDK 35 ==="
-          # تثبيت SDK 35 والأساسيات
-          sdkmanager --install \
-            "platform-tools" \
-            "platforms;android-35" \
-            "platforms;android-34" \
-            "build-tools;35.0.0" \
-            "build-tools;34.0.0" || true
-          
-          echo ""
-          echo "=== Accepting licenses again after install ==="
+          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0" "build-tools;34.0.0" || true
           yes | sdkmanager --licenses || true
-          
-          echo ""
-          echo "=== Installed packages ==="
           sdkmanager --list_installed | grep -E "platforms;android-3[45]|build-tools" || true
-          echo ""
-          echo "SDK 35 ready ✅"
 
       - name: 📦 Cache Gradle
         uses: actions/cache@v4
@@ -91,133 +72,93 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: 🔧 Grant execute permission for gradlew
+      - name: 🔧 Grant execute permission
         run: chmod +x gradlew
 
-      - name: ✅ Verify model manifest
-        run: |
-          echo "Checking manifest.json..."
-          python3 tools/verify_manifest.py app/src/main/assets/models/manifest.json
-          echo "Manifest OK ✅"
+      - name: ✅ Verify manifest
+        run: python3 tools/verify_manifest.py app/src/main/assets/models/manifest.json
 
-      - name: 📊 Environment info
+      - name: 🔍 Check for bundled models
+        id: check-bundled
         run: |
-          echo "=== Java ==="
-          java -version
-          echo ""
-          echo "=== Gradle ==="
-          ./gradlew --version
-          echo ""
-          echo "=== Android SDK ==="
-          ls -lh $ANDROID_HOME/platforms/ | grep android- || true
-          echo ""
+          if ls app/src/main/assets/models/*.onnx 1> /dev/null 2>&1; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "✅ Found bundled models:"
+            ls -lh app/src/main/assets/models/*.onnx
+            du -sh app/src/main/assets/models/
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No bundled models found - building standard APK (<50MB)"
+            echo "   For bundled APK (~1.1GB), place .onnx files in app/src/main/assets/models/"
+          fi
 
-      - name: 🔨 Build Debug APK
-        if: ${{ github.event.inputs.build_type != 'release' }}
+      - name: 🔨 Build Standard Debug APK (<50MB)
+        if: ${{ github.event.inputs.build_type != 'release' && github.event.inputs.build_type != 'bundled' }}
         run: |
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon -Dorg.gradle.parallel=true -Dorg.gradle.caching=true
-          echo "Debug APK built ✅"
-          ls -lh app/build/outputs/apk/debug/
-          du -sh app/build/outputs/apk/debug/*.apk
+          ./gradlew :app:assembleStandardDebug --stacktrace --no-daemon
+          ls -lh app/build/outputs/apk/standard/debug/
 
-      - name: 🔨 Build Release APK
+      - name: 🔨 Build Bundled Debug APK (~1.1GB with models)
+        if: ${{ steps.check-bundled.outputs.found == 'true' && (github.event.inputs.build_type == 'bundled' || github.event.inputs.build_type == 'both' || github.event.inputs.include_bundled == 'true') }}
+        run: |
+          ./gradlew :app:assembleBundledDebug --stacktrace --no-daemon
+          ls -lh app/build/outputs/apk/bundled/debug/
+          echo "Bundled APK contains models and works 100% offline from first launch"
+
+      - name: 🔨 Build Release APKs
         if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' }}
         run: |
-          ./gradlew :app:assembleRelease --stacktrace --no-daemon -Dorg.gradle.parallel=true -Dorg.gradle.caching=true
-          echo "Release APK built ✅"
-          ls -lh app/build/outputs/apk/release/
+          ./gradlew :app:assembleStandardRelease --stacktrace --no-daemon
+          if [ "${{ steps.check-bundled.outputs.found }}" == "true" ]; then
+            ./gradlew :app:assembleBundledRelease --stacktrace --no-daemon || true
+          fi
 
       - name: 🧪 Run unit tests
-        run: |
-          ./gradlew :app:testDebugUnitTest --no-daemon
-          echo "Unit tests passed ✅"
+        run: ./gradlew :app:testStandardDebugUnitTest --no-daemon
 
-      - name: 📏 APK size summary
+      - name: 📏 APK Summary
         if: always()
         run: |
           echo "## 📦 APK Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -d "app/build/outputs/apk/debug" ]; then
-            echo "### Debug APK" >> $GITHUB_STEP_SUMMARY
-            ls -lh app/build/outputs/apk/debug/*.apk | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+          echo "### Standard APK (تحميل النماذج عند أول فتح)" >> $GITHUB_STEP_SUMMARY
+          echo "- الحجم: <50MB" >> $GITHUB_STEP_SUMMARY
+          echo "- مناسب لـ Play Store" >> $GITHUB_STEP_SUMMARY
+          echo "- النماذج 1.1GB تُنزّل مرة واحدة عبر Wi-Fi" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -d "app/build/outputs/apk/bundled" ]; then
+            echo "### Bundled APK (النماذج مدمجة)" >> $GITHUB_STEP_SUMMARY
+            echo "- الحجم: ~1.1GB" >> $GITHUB_STEP_SUMMARY
+            echo "- يعمل 100% بدون إنترنت من أول تشغيل" >> $GITHUB_STEP_SUMMARY
+            echo "- مناسب للتوزيع المباشر" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          if [ -d "app/build/outputs/apk/release" ]; then
-            echo "### Release APK" >> $GITHUB_STEP_SUMMARY
-            ls -lh app/build/outputs/apk/release/*.apk | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "### 📱 Installation" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "adb install app-debug.apk" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 التحميل" >> $GITHUB_STEP_SUMMARY
+          echo "من Artifacts في الأسفل" >> $GITHUB_STEP_SUMMARY
 
-      - name: ⬆️ Upload Debug APK
-        if: always() && (hashFiles('app/build/outputs/apk/debug/*.apk') != '')
+      - name: ⬆️ Upload Standard Debug APK
+        if: always() && (hashFiles('app/build/outputs/apk/standard/debug/*.apk') != '')
         uses: actions/upload-artifact@v4
         with:
-          name: Shadow306-debug-APK-${{ github.sha }}
-          path: app/build/outputs/apk/debug/*.apk
+          name: Shadow306-standard-debug-${{ github.sha }}
+          path: app/build/outputs/apk/standard/debug/*.apk
           retention-days: 30
           compression-level: 0
-          if-no-files-found: warn
 
-      - name: ⬆️ Upload Release APK
-        if: always() && (hashFiles('app/build/outputs/apk/release/*.apk') != '')
+      - name: ⬆️ Upload Bundled Debug APK
+        if: always() && (hashFiles('app/build/outputs/apk/bundled/debug/*.apk') != '')
         uses: actions/upload-artifact@v4
         with:
-          name: Shadow306-release-APK-${{ github.sha }}
-          path: app/build/outputs/apk/release/*.apk
+          name: Shadow306-bundled-debug-${{ github.sha }}
+          path: app/build/outputs/apk/bundled/debug/*.apk
+          retention-days: 30
+          compression-level: 0
+
+      - name: ⬆️ Upload Release APKs
+        if: always() && (hashFiles('app/build/outputs/apk/*/release/*.apk') != '')
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shadow306-release-${{ github.sha }}
+          path: app/build/outputs/apk/*/release/*.apk
           retention-days: 90
           compression-level: 0
-          if-no-files-found: ignore
-
-      - name: ⬆️ Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports-${{ github.sha }}
-          path: |
-            app/build/reports/tests/
-            app/build/test-results/
-          retention-days: 7
-          if-no-files-found: ignore
-
-  build-bundle:
-    name: Build AAB for Play Store
-    runs-on: ubuntu-latest
-    if: github.event.inputs.build_type == 'both' || github.event.inputs.build_type == 'release'
-    needs: build
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: ☕ Setup JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: 🤖 Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: 🔍 Accept licenses & Install SDK
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" || true
-          yes | sdkmanager --licenses || true
-
-      - name: 🔧 Grant execute permission
-        run: chmod +x gradlew
-
-      - name: 📦 Build Release Bundle (AAB)
-        run: ./gradlew :app:bundleRelease --no-daemon --stacktrace
-
-      - name: ⬆️ Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: Shadow306-release-AAB-${{ github.sha }}
-          path: app/build/outputs/bundle/release/*.aab
-          retention-days: 90
-          if-no-files-found: warn

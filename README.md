@@ -270,3 +270,43 @@ MIT — انظر `LICENSE` (أضف ملفك الخاص).
 | Quick CI | `android.yml` | سريع - اختبارات + Lint فقط | PRs |
 
 انظر `.github/workflows/README.md` للتفاصيل الكاملة.
+
+---
+
+## 📦 وضعان للتوزيع: Standard vs Bundled
+
+### Standard (الافتراضي - للـ Play Store)
+- **الحجم**: <50MB APK
+- **النماذج**: تُنزّل مرة واحدة عند أول فتح عبر Wi-Fi (1.1GB)
+- **البناء**: `./gradlew :app:assembleStandardDebug`
+- **مناسب لـ**: Play Store، عامة المستخدمين
+
+### Bundled (النماذج مدمجة - بدون إنترنت أبداً)
+- **الحجم**: ~1.1GB APK
+- **النماذج**: مدمجة داخل APK، يعمل 100% بدون إنترنت من أول تشغيل
+- **البناء**: `./gradlew :app:assembleBundledDebug` (يتطلب وضع .onnx في assets)
+- **مناسب لـ**: توزيع مباشر، مناطق بدون إنترنت، متاجر
+
+**كيف تدمج النماذج؟**
+
+1. حمّل النماذج الحقيقية محلياً (خارج الساندبوكس):
+   ```bash
+   ./tools/download_and_bundle_models.sh
+   # أو حمّل يدوياً من insightface, VITON-HD, etc.
+   ```
+
+2. ضعها في `app/src/main/assets/models/` ثم:
+   ```bash
+   python3 tools/compute_sha.py app/src/main/assets/models/ app/src/main/assets/models/manifest.json
+   ./gradlew :app:assembleBundledDebug
+   ```
+
+انظر `docs/BUNDLED_MODE.md` للتفاصيل الكاملة.
+
+**لماذا لا نستطيع التحميل في الساندبوكس؟**
+
+بيئة الساندبوكس تسمح فقط بـ `github.com`, `codeload.github.com`, `api.github.com`.
+نماذج InsightFace تُستضاف على `objects.githubusercontent.com` (محظور) و HuggingFace (محظور).
+لذا يجب التحميل محلياً حيث الإنترنت غير محدود.
+
+الكود جاهز لدعم الوضعين - `BundledModelInstaller.kt` ينسخ النماذج من assets تلقائياً عند أول تشغيل.
