@@ -7,10 +7,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build:
     name: Build APK (Original - Download After Install)
@@ -29,52 +25,75 @@ jobs:
 
       - name: 🤖 Setup Android SDK 34
         run: |
-          echo "ANDROID_HOME: $ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
           yes | sdkmanager --licenses || true
-          sdkmanager --install "platform-tools" "platforms;android-34" "platforms;android-33" "build-tools;34.0.0" "build-tools;33.0.1" || true
+          sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
           yes | sdkmanager --licenses || true
-          echo "Installed:"
-          sdkmanager --list_installed | grep -E "platforms;android|build-tools" || true
 
       - name: 🔧 Grant execute
         run: chmod +x gradlew
 
-      - name: ✅ Verify
+      - name: ✅ Verify manifest + Icon
         run: |
-          python3 tools/verify_manifest.py app/src/main/assets/models/manifest.json || true
+          echo "=== Manifest ==="
+          cat app/src/main/assets/models/manifest.json | head -20
+          echo ""
+          echo "=== Icon ==="
+          ls -lh app/src/main/res/drawable/ic_launcher_foreground.xml
+          ls -lh app/src/main/res/mipmap-anydpi-v26/
+          echo ""
+          echo "=== Assets ==="
           ls -lh app/src/main/assets/models/
 
-      - name: 🔨 Build Debug APK - Original Design
+      - name: 🔨 Build Debug APK
         run: |
-          echo "Building Shadow306 original - APK <50MB, downloads models after install"
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
+          echo "=== Clean ==="
+          ./gradlew clean --no-daemon 2>&1 | tail -5
           echo ""
-          echo "=== APKs ==="
-          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK found"
+          echo "=== Build with rerun-tasks ==="
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon --rerun-tasks 2>&1 | tee /tmp/build.log
+          EXIT_CODE=${PIPESTATUS[0]}
           echo ""
-          echo "=== Outputs ==="
-          ls -R app/build/outputs/ 2>/dev/null | head -30 || echo "No outputs"
+          echo "=== Exit code: $EXIT_CODE ==="
+          echo ""
+          echo "=== Find APKs everywhere ==="
+          find . -type f -name "*.apk" 2>/dev/null | xargs ls -lh 2>/dev/null || echo "No APK anywhere"
+          echo ""
+          echo "=== app/build ==="
+          ls -R app/build 2>/dev/null | head -100 || echo "No build dir"
+          echo ""
+          echo "=== Last 30 lines ==="
+          tail -30 /tmp/build.log
+          exit $EXIT_CODE
 
       - name: 📏 Summary
         if: always()
         run: |
           echo "## 📦 Shadow306 APK - Original Design" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- APK <50MB lightweight" >> $GITHUB_STEP_SUMMARY
-          echo "- Models 1.1GB download once via Wi-Fi after first launch" >> $GITHUB_STEP_SUMMARY
-          echo "- Then 100% offline" >> $GITHUB_STEP_SUMMARY
+          echo "APK <50MB, models download after install, then 100% offline" >> $GITHUB_STEP_SUMMARY
+          echo "Icon: shadow crescent + AI dot adaptive" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if find app/build -name "*.apk" -type f | grep -q .; then
-            echo "### ✅ APK Built Successfully" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ SUCCESS - APK Built" >> $GITHUB_STEP_SUMMARY
             find app/build -name "*.apk" -type f -exec ls -lh {} \; | while read l; do echo "- $l" >> $GITHUB_STEP_SUMMARY; done
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📥 Download" >> $GITHUB_STEP_SUMMARY
-            echo "Artifacts below -> Shadow306-APK-xxx.zip" >> $GITHUB_STEP_SUMMARY
+            echo "Download from Artifacts below" >> $GITHUB_STEP_SUMMARY
           else
-            echo "### ❌ No APK" >> $GITHUB_STEP_SUMMARY
+            echo "### ❌ FAILED - No APK" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Build dir structure" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -150 /tmp/build.log >> $GITHUB_STEP_SUMMARY || true
+            ls -R app/build 2>/dev/null | head -150 >> $GITHUB_STEP_SUMMARY || echo "No build dir" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Last 150 lines of log" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -150 /tmp/build.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Errors" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            grep -i -E "error|failed|exception|FAILED" /tmp/build.log | head -50 >> $GITHUB_STEP_SUMMARY || echo "No explicit errors" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
 
@@ -83,7 +102,10 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: Shadow306-APK-${{ github.sha }}
-          path: app/build/outputs/apk/**/*.apk
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/**/*.apk
+            **/*.apk
           retention-days: 30
           if-no-files-found: warn
 
