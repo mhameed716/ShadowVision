@@ -15,7 +15,7 @@ import java.io.File
  * The real ORT Mobile library (com.microsoft.onnxruntime:onnxruntime-android)
  * is loaded only when a model file actually exists. If the models are not
  * installed yet, [isAvailable] returns false and every engine falls back to
- * the CPU approximation in core/engine/*.
+ * the CPU approximation in core/engine.
  *
  * This design guarantees the app never crashes on devices without the models,
  * and still passes Play Store review (no hidden native crashes).
