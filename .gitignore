@@ -17,14 +17,15 @@ captures/
 .cxx/
 *.hprof
 
-# Models (large binaries) - keep manifest.json but ignore .onnx
-**/*.onnx
-**/*.onnx.tmp
-**/models/*.onnx
-app/src/main/assets/models/*.onnx
+# Models - allow small bundled efficient models in assets, ignore large ones
+# Large models (>50MB) should not be committed, use download manager
+# Small efficient models (<5MB) are allowed for bundled mode
+**/models/*.onnx.tmp
+**/models/.tmp/
+# Ignore large onnx in root models/ (for offline sideload, not for git)
 models/*.onnx
-# Keep manifest
-!**/manifest.json
+# Allow small efficient models in assets (force add with git add -f if needed)
+# app/src/main/assets/models/*.onnx is allowed for bundled mode
 
 # OS
 .DS_Store
