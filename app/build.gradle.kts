@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -13,8 +15,6 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
-
-        resourceConfigurations += setOf("en", "ar")
     }
 
     buildTypes {
@@ -52,14 +52,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-Xjvm-default=all",
-        )
-    }
-
     androidResources {
         localeFilters += setOf("en", "ar")
         generateLocaleConfig = true
@@ -76,6 +68,15 @@ android {
         abortOnError = false
         checkReleaseBuilds = false
         disable += setOf("MissingTranslation", "ExtraTranslation")
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+        freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")
+        freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
 
