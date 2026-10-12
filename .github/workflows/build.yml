@@ -32,38 +32,36 @@ jobs:
 
       - name: 🔨 Build Debug APK
         run: |
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon --info 2>&1 | tee /tmp/build.log
           echo "=== APKs ==="
           find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK"
-          echo "=== Build dir files ==="
+          echo "=== Build dir ==="
           find app/build -type f | head -100 || echo "No build dir"
-          echo "=== Last 50 ==="
           tail -50 /tmp/build.log
 
-      - name: 📤 Push log to logs branch
+      - name: 📤 Debug push
         if: always()
         run: |
+          echo "=== Trying to push log ==="
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          # Create logs branch content
+          git status
+          echo "=== Remote ==="
+          git remote -v
+          echo "=== Trying push to logs ==="
           mkdir -p /tmp/logs
-          cp /tmp/build.log /tmp/logs/build-${{ github.sha }}.log
-          echo "# Build log ${{ github.sha }}" > /tmp/logs/README.md
-          echo "" >> /tmp/logs/README.md
-          echo "Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> /tmp/logs/README.md
-          echo "" >> /tmp/logs/README.md
-          echo '```' >> /tmp/logs/README.md
-          tail -200 /tmp/build.log >> /tmp/logs/README.md
-          echo '```' >> /tmp/logs/README.md
-          # Push to logs branch
-          git fetch origin logs 2>&1 || echo "No logs branch yet"
-          git checkout --orphan logs-temp || git checkout -b logs-temp
-          git rm -rf . 2>&1 || true
-          cp -r /tmp/logs/* . 2>&1 || true
-          cp /tmp/build.log ./full-${{ github.sha }}.log 2>&1 || true
-          git add . 2>&1
-          git commit -m "log ${{ github.sha }}" 2>&1 || echo "Commit failed"
-          git push origin logs-temp:logs --force 2>&1 || echo "Push failed"
+          cp /tmp/build.log /tmp/logs/build.log
+          cd /tmp
+          git clone https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git logs-repo || echo "Clone failed"
+          cd logs-repo
+          git checkout --orphan logs || git checkout -b logs
+          cp /tmp/logs/build.log ./build-${{ github.sha }}.log
+          echo "# Log ${{ github.sha }}" > README.md
+          tail -100 /tmp/build.log >> README.md
+          git add .
+          git commit -m "log ${{ github.sha }}" || echo "Commit failed"
+          git push origin logs --force 2>&1 || echo "Push failed with token"
+          echo "=== Done ==="
 
       - name: ⬆️ Upload APK
         if: always()
