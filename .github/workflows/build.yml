@@ -1,8 +1,7 @@
 name: Build Shadow306 APK
 
 # يبني الـ APK تلقائياً عند كل push - حمّل الـ APK من تبويب Actions
-# هذا الـ Workflow يثبت بيئة أندرويد كاملة (JDK 17 + Android SDK 35) ويبني الـ APK في السحابة
-# لأن بيئة الساندبوكس المحلية لا تحتوي على Android SDK
+# يثبت بيئة أندرويد كاملة (JDK 17 + Android SDK 35) ويبني الـ APK في السحابة
 
 on:
   push:
@@ -19,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: 'نوع البناء (debug/release/both)'
+        description: 'نوع البناء'
         required: true
         default: 'debug'
         type: choice
@@ -28,7 +27,6 @@ on:
           - release
           - both
 
-# إلغاء البناءات القديمة إذا تم push جديد (توفير موارد)
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -37,17 +35,14 @@ jobs:
   build:
     name: Build APK (JDK 17 + SDK 35)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
-      # 1. سحب الكود من المستودع
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # 2. تثبيت JDK 17 (مطلوب لـ AGP 9.2.0 + Kotlin 2.4.21)
-      # AGP 9.2 يتطلب JDK 17 كحد أدنى
       - name: ☕ Setup JDK 17
         uses: actions/setup-java@v4
         with:
@@ -55,46 +50,36 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 3. تثبيت Android SDK 35 + الأدوات المطلوبة
-      # نثبت SDK 35 كما طلبت + SDK 37 لدعم compileSdk الحالي + الأدوات الأساسية
-      - name: 🤖 Setup Android SDK 35
+      # إعداد Android SDK بطريقة مستقرة - بدون تحديد إصدار cmdline-tools لتجنب مشكلة التراخيص
+      - name: 🤖 Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 12266719
-          packages: |
-            platform-tools
-            platforms;android-35
-            platforms;android-34
-            platforms;android-33
-            build-tools;35.0.0
-            build-tools;34.0.0
-            build-tools;33.0.1
-            ndk;28.2.13676358
 
-      # 3.1 محاولة تثبيت SDK 37 إذا كان متاحاً (لدعم compileSdk 37)
-      - name: 🤖 Try install SDK 37 (for compileSdk 37)
-        continue-on-error: true
+      - name: 🔍 Accept licenses & Install SDK 35
         run: |
-          sdkmanager --install "platforms;android-37" "build-tools;36.0.0" || echo "SDK 37 not yet available in this runner, will use 35"
-          sdkmanager --list_installed | grep -E "platforms;android-3[457]|build-tools"
-
-      # 4. التحقق من تثبيت SDK 35
-      - name: 🔍 Verify Android SDK 35
-        run: |
-          echo "ANDROID_HOME: $ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          echo "=== Accepting all licenses ==="
+          # قبول جميع التراخيص تلقائياً
+          yes | sdkmanager --licenses || true
+          
           echo ""
-          echo "Installed platforms:"
-          sdkmanager --list_installed | grep -E "platforms;android" || true
+          echo "=== Installing SDK 35 ==="
+          # تثبيت SDK 35 والأساسيات
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "platforms;android-34" \
+            "build-tools;35.0.0" \
+            "build-tools;34.0.0" || true
+          
           echo ""
-          echo "Installed build-tools:"
-          sdkmanager --list_installed | grep -E "build-tools" || true
+          echo "=== Accepting licenses again after install ==="
+          yes | sdkmanager --licenses || true
+          
           echo ""
-          ls -lh $ANDROID_HOME/platforms/ | grep android- || true
+          echo "=== Installed packages ==="
+          sdkmanager --list_installed | grep -E "platforms;android-3[45]|build-tools" || true
           echo ""
           echo "SDK 35 ready ✅"
 
-      # 5. Cache Gradle (لتسريع البناء من 8 دقائق إلى 2 دقيقة)
       - name: 📦 Cache Gradle
         uses: actions/cache@v4
         with:
@@ -106,27 +91,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # 6. منح صلاحية التنفيذ لـ gradlew
       - name: 🔧 Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 7. التحقق من manifest.json (روابط النماذج + sha256 + أحجام)
-      # هذا يضمن أن ملف المانيفست صالح قبل البناء
       - name: ✅ Verify model manifest
         run: |
           echo "Checking manifest.json..."
           python3 tools/verify_manifest.py app/src/main/assets/models/manifest.json
           echo "Manifest OK ✅"
-          MODELS=$(python3 -c "import json; print(len(json.load(open('app/src/main/assets/models/manifest.json'))['models']))")
-          SIZE=$(python3 -c "import json; m=json.load(open('app/src/main/assets/models/manifest.json')); print(f\"{m['totalBytes']/1024/1024/1024:.2f} GB\")")
-          echo "Models: $MODELS models"
-          echo "Total size: $SIZE"
-          echo "## 📦 Model Pack" >> $GITHUB_STEP_SUMMARY
-          echo "- $MODELS models" >> $GITHUB_STEP_SUMMARY
-          echo "- Total: $SIZE" >> $GITHUB_STEP_SUMMARY
-          echo "- Manifest valid ✅" >> $GITHUB_STEP_SUMMARY
 
-      # 8. معلومات البيئة (للتشخيص)
       - name: 📊 Environment info
         run: |
           echo "=== Java ==="
@@ -136,21 +109,9 @@ jobs:
           ./gradlew --version
           echo ""
           echo "=== Android SDK ==="
-          echo "Compile SDK: 37 (fallback 35)"
-          echo "Min SDK: 26"
-          echo "Target SDK: 37"
-          echo "Build Tools: 35.0.0, 34.0.0"
-          echo "NDK: 28.2.13676358"
+          ls -lh $ANDROID_HOME/platforms/ | grep android- || true
           echo ""
-          echo "=== Project ==="
-          echo "Kotlin: 2.4.21"
-          echo "AGP: 9.2.0"
-          echo "Compose BOM: 2026.09.00"
-          echo "ONNX Runtime: 1.31.0"
-          echo "Gradle: 9.4.1"
 
-      # 9. بناء Debug APK (الأساسي - بدون نماذج، <50MB)
-      # هذا هو الـ APK الخفيف الذي يُرفع للمتجر
       - name: 🔨 Build Debug APK
         if: ${{ github.event.inputs.build_type != 'release' }}
         run: |
@@ -159,53 +120,38 @@ jobs:
           ls -lh app/build/outputs/apk/debug/
           du -sh app/build/outputs/apk/debug/*.apk
 
-      # 10. بناء Release APK (مُحسّن + Proguard + مُصغّر)
       - name: 🔨 Build Release APK
         if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' }}
         run: |
           ./gradlew :app:assembleRelease --stacktrace --no-daemon -Dorg.gradle.parallel=true -Dorg.gradle.caching=true
           echo "Release APK built ✅"
           ls -lh app/build/outputs/apk/release/
-          du -sh app/build/outputs/apk/release/*.apk
 
-      # 11. تشغيل اختبارات الوحدة (JVM فقط - لا تحتاج Android SDK)
-      # تختبر Retry, Format, Checksums, FileIo, Manifest
       - name: 🧪 Run unit tests
         run: |
           ./gradlew :app:testDebugUnitTest --no-daemon
           echo "Unit tests passed ✅"
-          find app/build/test-results -name "*.xml" | head -5
 
-      # 12. تلخيص حجم الـ APK في GitHub Summary
       - name: 📏 APK size summary
         if: always()
         run: |
           echo "## 📦 APK Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -d "app/build/outputs/apk/debug" ]; then
-            echo "### Debug APK (للاختبار)" >> $GITHUB_STEP_SUMMARY
-            ls -lh app/build/outputs/apk/debug/*.apk | awk '{print "- `" $9 "` (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+            echo "### Debug APK" >> $GITHUB_STEP_SUMMARY
+            ls -lh app/build/outputs/apk/debug/*.apk | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
           if [ -d "app/build/outputs/apk/release" ]; then
-            echo "### Release APK (للنشر)" >> $GITHUB_STEP_SUMMARY
-            ls -lh app/build/outputs/apk/release/*.apk | awk '{print "- `" $9 "` (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+            echo "### Release APK" >> $GITHUB_STEP_SUMMARY
+            ls -lh app/build/outputs/apk/release/*.apk | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "### 📱 كيفية التثبيت" >> $GITHUB_STEP_SUMMARY
+          echo "### 📱 Installation" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "# حمّل الـ APK من Artifacts ثم:" >> $GITHUB_STEP_SUMMARY
-          echo "adb install Shadow306-debug.apk" >> $GITHUB_STEP_SUMMARY
-          echo "# أو اسحب الملف للهاتف وثبّته" >> $GITHUB_STEP_SUMMARY
+          echo "adb install app-debug.apk" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔒 Offline-first" >> $GITHUB_STEP_SUMMARY
-          echo "- APK الأساسي <50MB (بدون نماذج)" >> $GITHUB_STEP_SUMMARY
-          echo "- النماذج 1.1GB تُنزّل مرة واحدة عبر Wi-Fi" >> $GITHUB_STEP_SUMMARY
-          echo "- يعمل 100% بدون إنترنت بعد الإعداد" >> $GITHUB_STEP_SUMMARY
-          echo "- الخصوصية: الصور لا تخرج من الجهاز" >> $GITHUB_STEP_SUMMARY
 
-      # 13. رفع Debug APK كـ Artifact (حمّله من تبويب Actions → Artifacts)
       - name: ⬆️ Upload Debug APK
         if: always() && (hashFiles('app/build/outputs/apk/debug/*.apk') != '')
         uses: actions/upload-artifact@v4
@@ -216,7 +162,6 @@ jobs:
           compression-level: 0
           if-no-files-found: warn
 
-      # 14. رفع Release APK
       - name: ⬆️ Upload Release APK
         if: always() && (hashFiles('app/build/outputs/apk/release/*.apk') != '')
         uses: actions/upload-artifact@v4
@@ -227,7 +172,6 @@ jobs:
           compression-level: 0
           if-no-files-found: ignore
 
-      # 15. رفع تقرير الاختبارات
       - name: ⬆️ Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -239,7 +183,6 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # وظيفة إضافية: بناء Bundle (AAB) للنشر على Google Play
   build-bundle:
     name: Build AAB for Play Store
     runs-on: ubuntu-latest
@@ -258,6 +201,12 @@ jobs:
 
       - name: 🤖 Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: 🔍 Accept licenses & Install SDK
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" || true
+          yes | sdkmanager --licenses || true
 
       - name: 🔧 Grant execute permission
         run: chmod +x gradlew

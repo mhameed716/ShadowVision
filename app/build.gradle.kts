@@ -6,18 +6,17 @@ plugins {
 
 android {
     namespace = "com.shadow306.app"
-    compileSdk = 37
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.shadow306.app"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
 
         resourceConfigurations += setOf("en", "ar")
 
-        // Only ship the ABIs ONNX Runtime Mobile publishes for Android.
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
@@ -41,11 +40,9 @@ android {
 
     packaging {
         resources {
-            // ONNX Runtime ships a few duplicate metadata files across ABIs.
             excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/DEPENDENCIES")
         }
         jniLibs {
-            // Keep every ABI: models are large but the runtime .so files are not.
             useLegacyPackaging = false
         }
     }
@@ -89,7 +86,6 @@ android {
 }
 
 dependencies {
-    // ---- AndroidX core ----------------------------------------------------
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.activity.compose)
@@ -99,7 +95,6 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.work.runtime)
 
-    // ---- Compose ----------------------------------------------------------
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
@@ -108,15 +103,12 @@ dependencies {
     implementation(libs.compose.material.icons.extended)
     debugImplementation(libs.compose.ui.tooling)
 
-    // ---- On-device inference ---------------------------------------------
     implementation(libs.onnxruntime.android)
 
-    // ---- Imaging / IO -----------------------------------------------------
     implementation(libs.coil.core)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.android)
 
-    // ---- Tests (pure JVM, no Android framework) ---------------------------
     testImplementation(libs.junit)
     testImplementation(libs.truth)
     testImplementation(libs.kotlinx.coroutines.core)
