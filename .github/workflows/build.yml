@@ -18,17 +18,24 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: ☕ Setup JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
-      - name: 🤖 Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: 🤖 Setup Android SDK 34
+        run: |
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "platform-tools" "platforms;android-34" "platforms;android-33" "build-tools;34.0.0" "build-tools;33.0.1" || true
+          yes | sdkmanager --licenses || true
+          echo "Installed:"
+          sdkmanager --list_installed | grep -E "platforms;android|build-tools" || true
 
       - name: 🔧 Grant execute
         run: chmod +x gradlew
@@ -40,32 +47,51 @@ jobs:
 
       - name: 🔨 Build Debug APK - Original Design
         run: |
+          echo "Building Shadow306 original - APK <50MB, downloads models after install"
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
+          echo ""
           echo "=== APKs ==="
-          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK"
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK found"
+          echo ""
+          echo "=== Outputs ==="
+          ls -R app/build/outputs/ 2>/dev/null | head -30 || echo "No outputs"
 
       - name: 📏 Summary
         if: always()
         run: |
           echo "## 📦 Shadow306 APK - Original Design" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "APK <50MB, models download once via Wi-Fi after install, then 100% offline" >> $GITHUB_STEP_SUMMARY
+          echo "- APK <50MB lightweight" >> $GITHUB_STEP_SUMMARY
+          echo "- Models 1.1GB download once via Wi-Fi after first launch" >> $GITHUB_STEP_SUMMARY
+          echo "- Then 100% offline" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if find app/build -name "*.apk" -type f | grep -q .; then
-            echo "### ✅ APK Built" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ APK Built Successfully" >> $GITHUB_STEP_SUMMARY
             find app/build -name "*.apk" -type f -exec ls -lh {} \; | while read l; do echo "- $l" >> $GITHUB_STEP_SUMMARY; done
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📥 Download" >> $GITHUB_STEP_SUMMARY
+            echo "Artifacts below -> Shadow306-APK-xxx.zip" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ❌ No APK" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -100 /tmp/build.log >> $GITHUB_STEP_SUMMARY
+            tail -150 /tmp/build.log >> $GITHUB_STEP_SUMMARY || true
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: ⬆️ Upload APK
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Shadow306-APK-${{ github.sha }}
           path: app/build/outputs/apk/**/*.apk
           retention-days: 30
           if-no-files-found: warn
+
+      - name: ⬆️ Upload logs
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: build-logs-${{ github.sha }}
+          path: /tmp/build.log
+          retention-days: 7
+          if-no-files-found: ignore
