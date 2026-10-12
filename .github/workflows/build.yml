@@ -54,8 +54,24 @@ jobs:
             } catch(e) {
               log = 'Failed to read log: ' + e.message;
             }
-            const tail = log.slice(-8000);
-            const body = `## Build failed for ${{ github.sha }}\n\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n### Last 8000 chars\n\`\`\`\n${tail}\n\`\`\``;
+            // Find actual errors - look for Execution failed, e:, error, etc
+            const lines = log.split('\n');
+            let errorLines = [];
+            let inError = false;
+            for(let i=0; i<lines.length; i++) {
+              const line = lines[i];
+              if(/Execution failed|e: |error:|FAILED|Exception/.test(line)) {
+                // Capture 10 lines before and 20 after
+                const start = Math.max(0, i-10);
+                const end = Math.min(lines.length, i+20);
+                errorLines.push(...lines.slice(start, end));
+                errorLines.push('---');
+                if(errorLines.length > 200) break;
+              }
+            }
+            const errors = errorLines.join('\n').slice(0, 8000);
+            const tail = lines.slice(-100).join('\n');
+            const body = `## Build failed for ${{ github.sha }}\n\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n### Errors (first 8000 chars)\n\`\`\`\n${errors}\n\`\`\`\n\n### Last 100 lines\n\`\`\`\n${tail}\n\`\`\``;
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
