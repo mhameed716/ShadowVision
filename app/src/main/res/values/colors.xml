@@ -2,5 +2,9 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="shadow_ink">#FF08090D</color>
+    <color name="ic_launcher_background">#FF0B0D12</color>
+    <color name="primary">#FF7C5CFF</color>
+    <color name="primary_dark">#FF5A3DCC</color>
+    <color name="background">#FF0B0D12</color>
+    <color name="surface">#FF151821</color>
 </resources>
