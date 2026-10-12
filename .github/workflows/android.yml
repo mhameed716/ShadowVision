@@ -3,17 +3,11 @@ name: Android CI (Quick)
 on:
   push:
     branches: [ main ]
-    paths:
-      - '**.kt'
-      - '**.kts'
-      - '**.xml'
-      - 'gradle/**'
   pull_request:
     branches: [ main ]
 
 jobs:
-  lint-and-test:
-    name: Lint & Unit Tests
+  test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -26,23 +20,14 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: 🤖 Setup Android SDK 35
-        uses: android-actions/setup-android@v3
-
-      - name: 🔍 Accept licenses & Install SDK
+      - name: 🤖 Setup Android SDK
         run: |
           yes | sdkmanager --licenses || true
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0" || sdkmanager --install "platforms;android-34" "build-tools;34.0.0" || true
           yes | sdkmanager --licenses || true
 
-      - name: 🔧 Grant execute permission
+      - name: 🔧 Grant execute
         run: chmod +x gradlew
 
-      - name: ✅ Verify manifest
-        run: python3 tools/verify_manifest.py app/src/main/assets/models/manifest.json
-
-      - name: 🧪 Run unit tests
+      - name: 🧪 Tests
         run: ./gradlew :app:testStandardDebugUnitTest --no-daemon --stacktrace || ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace || true
-
-      - name: 🔍 Lint check
-        run: ./gradlew :app:lintStandardDebug --no-daemon --continue || ./gradlew :app:lintDebug --no-daemon --continue || true

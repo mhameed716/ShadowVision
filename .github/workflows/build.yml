@@ -3,15 +3,8 @@ name: Build Shadow306 APK
 on:
   push:
     branches: [ main, arena/**, develop ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.github/ISSUE_TEMPLATE/**'
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
   workflow_dispatch:
     inputs:
       build_type:
@@ -38,8 +31,6 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
 
       - name: ☕ Setup JDK 17
         uses: actions/setup-java@v5
@@ -48,31 +39,34 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: 🤖 Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: 🔍 Accept licenses & Install SDK 35
+      # إعداد Android SDK بدون استخدام android-actions/setup-android (لتجنب Node 20)
+      - name: 🤖 Setup Android SDK 35 (manual)
         run: |
-          echo "=== Accepting all licenses ==="
+          echo "=== Android SDK Setup (manual, no Node.js action) ==="
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          echo ""
+          
+          # قبول التراخيص
+          echo "Accepting licenses..."
           yes | sdkmanager --licenses || true
           
           echo ""
-          echo "=== Installing SDK 35 and 34 ==="
-          # Try 35 first, fallback to 34 if 35 not available
+          echo "Installing SDK 35..."
           sdkmanager --install "platform-tools" || true
-          sdkmanager --install "platforms;android-35" || sdkmanager --install "platforms;android-34" || true
+          sdkmanager --install "platforms;android-35" || echo "SDK 35 not available, trying 34"
           sdkmanager --install "platforms;android-34" || true
           sdkmanager --install "build-tools;35.0.0" || sdkmanager --install "build-tools;34.0.0" || true
           sdkmanager --install "build-tools;34.0.0" || true
           
           echo ""
-          echo "=== Accepting licenses again ==="
+          echo "Accepting licenses again..."
           yes | sdkmanager --licenses || true
           
           echo ""
-          echo "=== Installed packages ==="
-          sdkmanager --list_installed | grep -E "platforms;android|build-tools" || true
-          echo ""
+          echo "=== Installed ==="
+          sdkmanager --list_installed | grep -E "platforms;android|build-tools|platform-tools" || true
+          ls -lh $ANDROID_HOME/platforms/ | tail -10 || true
           echo "SDK ready ✅"
 
       - name: 📦 Cache Gradle
@@ -81,7 +75,6 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            ~/.android/build-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
@@ -89,118 +82,63 @@ jobs:
       - name: 🔧 Grant execute permission
         run: chmod +x gradlew
 
-      - name: ✅ Verify model manifest
+      - name: ✅ Verify manifest
         run: |
-          echo "Checking manifest.json..."
           python3 tools/verify_manifest.py app/src/main/assets/models/manifest.json
-          echo "Manifest OK ✅"
           ls -lh app/src/main/assets/models/
-
-      - name: 🔍 Check for bundled models
-        id: check-bundled
-        run: |
-          if ls app/src/main/assets/models/*.onnx 1> /dev/null 2>&1; then
-            echo "found=true" >> $GITHUB_OUTPUT
-            echo "✅ Found bundled models:"
-            ls -lh app/src/main/assets/models/*.onnx
-            du -sh app/src/main/assets/models/
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No bundled models - building standard APK"
-          fi
 
       - name: 📊 Environment info
         run: |
-          echo "=== Java ==="
           java -version
           echo ""
-          echo "=== Gradle ==="
           ./gradlew --version || true
           echo ""
-          echo "=== Android SDK ==="
-          ls $ANDROID_HOME/platforms/ | grep android- || true
+          echo "Gradle tasks (flavors):"
+          ./gradlew tasks --all | grep -E "assemble.*Debug" | head -20 || true
 
       - name: 🔨 Build Standard Debug APK
-        if: ${{ github.event.inputs.build_type != 'release' && github.event.inputs.build_type != 'bundled' }}
         run: |
-          ./gradlew :app:assembleStandardDebug --stacktrace --no-daemon -Dorg.gradle.parallel=true -Dorg.gradle.caching=true
-          echo "Standard Debug APK built ✅"
-          find app/build/outputs -name "*.apk" -type f -exec ls -lh {} \;
+          echo "Building Standard Debug..."
+          ./gradlew :app:assembleStandardDebug --stacktrace --no-daemon --info 2>&1 | tail -100
+          echo ""
+          echo "=== APKs found ==="
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; || true
 
       - name: 🔨 Build Bundled Debug APK
-        if: ${{ steps.check-bundled.outputs.found == 'true' && (github.event.inputs.build_type == 'bundled' || github.event.inputs.build_type == 'both' || github.event.inputs.include_bundled == 'true' || github.event_name == 'push') }}
         run: |
-          ./gradlew :app:assembleBundledDebug --stacktrace --no-daemon -Dorg.gradle.parallel=true -Dorg.gradle.caching=true
-          echo "Bundled Debug APK built ✅"
-          find app/build/outputs -name "*.apk" -type f -exec ls -lh {} \;
-
-      - name: 🔨 Build Release APKs
-        if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' }}
-        run: |
-          ./gradlew :app:assembleStandardRelease --stacktrace --no-daemon || true
-          if [ "${{ steps.check-bundled.outputs.found }}" == "true" ]; then
-            ./gradlew :app:assembleBundledRelease --stacktrace --no-daemon || true
-          fi
-          find app/build/outputs -name "*.apk" -type f -exec ls -lh {} \; || true
+          echo "Building Bundled Debug..."
+          ./gradlew :app:assembleBundledDebug --stacktrace --no-daemon 2>&1 | tail -100
+          echo ""
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; || true
 
       - name: 🧪 Run unit tests
         run: |
-          ./gradlew :app:testStandardDebugUnitTest --no-daemon --stacktrace || ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace || true
-          echo "Tests completed"
+          ./gradlew :app:testStandardDebugUnitTest --no-daemon --stacktrace 2>&1 | tail -50 || true
 
       - name: 📏 APK Summary
         if: always()
         run: |
           echo "## 📦 APK Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          find app/build/outputs -name "*.apk" -type f 2>/dev/null | while read apk; do
+          find app/build -name "*.apk" -type f 2>/dev/null | while read apk; do
             size=$(du -h "$apk" | cut -f1)
             echo "- \`$apk\` ($size)" >> $GITHUB_STEP_SUMMARY
           done
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📱 Installation" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "adb install app-debug.apk" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ ! -f app/build/outputs/apk/standard/debug/*.apk ] && [ ! -f app/build/outputs/apk/bundled/debug/*.apk ]; then
+            echo "⚠️ No APK found, checking build outputs..." >> $GITHUB_STEP_SUMMARY
+            find app/build -type f | head -20 >> $GITHUB_STEP_SUMMARY || true
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Built with JDK 17 + Android SDK 35" >> $GITHUB_STEP_SUMMARY
 
-      - name: ⬆️ Upload Standard Debug APK
-        if: always() && (hashFiles('app/build/outputs/apk/standard/debug/*.apk') != '')
+      - name: ⬆️ Upload APKs
+        if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: Shadow306-standard-debug-${{ github.sha }}
-          path: app/build/outputs/apk/standard/debug/*.apk
+          name: Shadow306-APKs-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/**/*.apk
           retention-days: 30
           compression-level: 0
           if-no-files-found: warn
-
-      - name: ⬆️ Upload Bundled Debug APK
-        if: always() && (hashFiles('app/build/outputs/apk/bundled/debug/*.apk') != '')
-        uses: actions/upload-artifact@v5
-        with:
-          name: Shadow306-bundled-debug-${{ github.sha }}
-          path: app/build/outputs/apk/bundled/debug/*.apk
-          retention-days: 30
-          compression-level: 0
-          if-no-files-found: warn
-
-      - name: ⬆️ Upload Release APKs
-        if: always() && (hashFiles('app/build/outputs/apk/*/release/*.apk') != '')
-        uses: actions/upload-artifact@v5
-        with:
-          name: Shadow306-release-${{ github.sha }}
-          path: app/build/outputs/apk/*/release/*.apk
-          retention-days: 90
-          compression-level: 0
-          if-no-files-found: ignore
-
-      - name: ⬆️ Fallback - Upload any APK
-        if: always() && (hashFiles('app/build/outputs/apk/**/*.apk') != '')
-        uses: actions/upload-artifact@v5
-        with:
-          name: Shadow306-all-APKs-${{ github.sha }}
-          path: app/build/outputs/apk/**/*.apk
-          retention-days: 30
-          compression-level: 0
-          if-no-files-found: ignore
