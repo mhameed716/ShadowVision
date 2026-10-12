@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -7,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.shadow306.app"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.shadow306.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
     }
@@ -52,31 +50,23 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-Xjvm-default=all",
+        )
+    }
+
     androidResources {
         localeFilters += setOf("en", "ar")
         generateLocaleConfig = true
-    }
-
-    testOptions {
-        unitTests {
-            isReturnDefaultValues = true
-            all { it.useJUnit() }
-        }
     }
 
     lint {
         abortOnError = false
         checkReleaseBuilds = false
         disable += setOf("MissingTranslation", "ExtraTranslation")
-    }
-}
-
-kotlin {
-    jvmToolchain(17)
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-        freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")
-        freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
 

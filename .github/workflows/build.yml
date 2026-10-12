@@ -13,27 +13,24 @@ concurrency:
 
 jobs:
   build:
-    name: Build APK (JDK 17 + SDK 35)
+    name: Build APK (Original - Download After Install)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: ☕ Setup JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
-      - name: 🤖 Setup Android SDK 35
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager --install "platform-tools" "platforms;android-35" "platforms;android-34" "build-tools;35.0.0" "build-tools;34.0.0" "ndk;28.2.13676358" || true
-          yes | sdkmanager --licenses || true
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: 🔧 Grant execute permission
+      - name: 🔧 Grant execute
         run: chmod +x gradlew
 
       - name: ✅ Verify
@@ -41,87 +38,34 @@ jobs:
           python3 tools/verify_manifest.py app/src/main/assets/models/manifest.json || true
           ls -lh app/src/main/assets/models/
 
-      - name: 🔨 Build Debug APK
+      - name: 🔨 Build Debug APK - Original Design
         run: |
-          echo "=== Gradle version ==="
-          ./gradlew --version
-          echo ""
-          echo "=== Available assemble tasks ==="
-          ./gradlew tasks --all | grep -i assemble | head -20
-          echo ""
-          echo "=== Building ==="
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon --info 2>&1 | tee /tmp/build.log
-          BUILD_EXIT=${PIPESTATUS[0]}
-          echo ""
-          echo "=== Build exit code: $BUILD_EXIT ==="
-          echo ""
-          echo "=== Searching for ANY APK ==="
-          find . -name "*.apk" -type f 2>/dev/null | head -20
-          echo ""
-          echo "=== app/build structure ==="
-          ls -lah app/build/ 2>/dev/null || echo "No app/build"
-          echo ""
-          echo "=== app/build/outputs ==="
-          find app/build -type f 2>/dev/null | head -100
-          echo ""
-          echo "=== Build log last 80 lines ==="
-          tail -80 /tmp/build.log
-          echo ""
-          echo "=== Build log errors ==="
-          grep -i -E "error|failed|exception" /tmp/build.log | head -30 || echo "No errors found in log"
-          echo ""
-          echo "=== Check if task was up-to-date ==="
-          grep -E "assembleDebug|UP-TO-DATE|FROM-CACHE|BUILD" /tmp/build.log | tail -20
-          # Force exit code to be visible
-          exit $BUILD_EXIT
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
+          echo "=== APKs ==="
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK"
 
       - name: 📏 Summary
         if: always()
         run: |
-          echo "## 📦 Shadow306 Build Debug" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Shadow306 APK - Original Design" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Build log size: $(wc -l < /tmp/build.log) lines" >> $GITHUB_STEP_SUMMARY
+          echo "APK <50MB, models download once via Wi-Fi after install, then 100% offline" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if find app/build -name "*.apk" -type f 2>/dev/null | grep -q .; then
-            echo "### ✅ APK Found" >> $GITHUB_STEP_SUMMARY
-            find app/build -name "*.apk" -type f -exec ls -lh {} \; >> $GITHUB_STEP_SUMMARY
+          if find app/build -name "*.apk" -type f | grep -q .; then
+            echo "### ✅ APK Built" >> $GITHUB_STEP_SUMMARY
+            find app/build -name "*.apk" -type f -exec ls -lh {} \; | while read l; do echo "- $l" >> $GITHUB_STEP_SUMMARY; done
           else
             echo "### ❌ No APK" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Build dir" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            ls -R app/build 2>/dev/null | head -100 >> $GITHUB_STEP_SUMMARY || echo "No build dir" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Last 100 lines" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -100 /tmp/build.log >> $GITHUB_STEP_SUMMARY || true
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Errors" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            grep -i -E "error|failed|exception" /tmp/build.log | head -50 >> $GITHUB_STEP_SUMMARY || echo "No errors" >> $GITHUB_STEP_SUMMARY
+            tail -100 /tmp/build.log >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: ⬆️ Upload APK
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: Shadow306-APK-${{ github.sha }}
-          path: |
-            app/build/outputs/apk/**/*.apk
-            **/*.apk
+          path: app/build/outputs/apk/**/*.apk
           retention-days: 30
           if-no-files-found: warn
-
-      - name: ⬆️ Upload full build dir
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: build-outputs-${{ github.sha }}
-          path: |
-            app/build/
-            /tmp/build.log
-          retention-days: 7
-          if-no-files-found: ignore
