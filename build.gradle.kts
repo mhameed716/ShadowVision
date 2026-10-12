@@ -1,8 +1,6 @@
-// Root project configuration.
-// Plugins are declared here with `apply false` and applied in feature modules.
+// Root project configuration - AGP 9.0+ has built-in Kotlin support
 plugins {
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
 }
 

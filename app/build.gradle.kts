@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -26,14 +25,11 @@ android {
     productFlavors {
         create("standard") {
             dimension = "distribution"
-            // APK خفيف <50MB، النماذج تُنزّل عند أول فتح - للـ Play Store
         }
         create("bundled") {
             dimension = "distribution"
             applicationIdSuffix = ".bundled"
             versionNameSuffix = "-bundled"
-            // APK مع النماذج مدمجة ~15MB مع النماذج الفعالة
-            // يعمل بدون إنترنت من أول تشغيل - للتوزيع المباشر
         }
     }
 
