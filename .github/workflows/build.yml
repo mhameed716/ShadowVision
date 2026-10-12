@@ -19,7 +19,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
+          cache: false
 
       - name: 🤖 Setup Android SDK 34
         run: |
@@ -32,42 +32,35 @@ jobs:
 
       - name: 🔨 Build Debug APK
         run: |
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon --info 2>&1 | tee /tmp/build.log
-          echo "=== APKs ==="
-          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK"
-          echo "=== Build dir ==="
-          find app/build -type f | head -100 || echo "No build dir"
-          tail -50 /tmp/build.log
-
-      - name: 📤 Debug push
-        if: always()
-        run: |
-          echo "=== Trying to push log ==="
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git status
-          echo "=== Remote ==="
-          git remote -v
-          echo "=== Trying push to logs ==="
-          mkdir -p /tmp/logs
-          cp /tmp/build.log /tmp/logs/build.log
-          cd /tmp
-          git clone https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git logs-repo || echo "Clone failed"
-          cd logs-repo
-          git checkout --orphan logs || git checkout -b logs
-          cp /tmp/logs/build.log ./build-${{ github.sha }}.log
-          echo "# Log ${{ github.sha }}" > README.md
-          tail -100 /tmp/build.log >> README.md
-          git add .
-          git commit -m "log ${{ github.sha }}" || echo "Commit failed"
-          git push origin logs --force 2>&1 || echo "Push failed with token"
-          echo "=== Done ==="
+          echo "=== Clean ==="
+          rm -rf app/build .gradle
+          ./gradlew clean --no-daemon || true
+          echo ""
+          echo "=== Build with rerun-tasks and no cache ==="
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon --rerun-tasks --no-build-cache --no-configuration-cache 2>&1 | tee /tmp/build.log
+          echo ""
+          echo "=== Result ==="
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK found"
+          ls -lh app/build/outputs/apk/debug/ 2>&1 || echo "No debug dir"
+          ls -R app/build/ 2>&1 | head -100 || echo "No build dir"
+          tail -100 /tmp/build.log
 
       - name: ⬆️ Upload APK
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: Shadow306-APK-${{ github.sha }}
-          path: app/build/outputs/apk/**/*.apk
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/**/*.apk
           retention-days: 30
           if-no-files-found: warn
+
+      - name: ⬆️ Upload logs
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: build-logs-${{ github.sha }}
+          path: /tmp/build.log
+          retention-days: 7
+          if-no-files-found: ignore
