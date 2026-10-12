@@ -33,51 +33,54 @@ jobs:
         run: chmod +x gradlew
 
       - name: 🔨 Build Debug APK
-        id: build
         run: |
           set -o pipefail
           rm -rf app/build
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
           EXIT_CODE=${PIPESTATUS[0]}
-          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          echo "Exit: $EXIT_CODE"
           exit $EXIT_CODE
 
-      - name: 💬 Create issue with log on failure
+      - name: 💬 Create issue with full log on failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let log = '';
-            try {
-              log = fs.readFileSync('/tmp/build.log', 'utf8');
-            } catch(e) {
-              log = 'Failed to read log: ' + e.message;
+            let log = fs.readFileSync('/tmp/build.log', 'utf8');
+            // Split into chunks of 60000 chars for multiple issues if needed
+            const chunks = [];
+            for(let i=0; i<log.length; i+=60000) {
+              chunks.push(log.slice(i, i+60000));
             }
-            // Find actual errors - look for Execution failed, e:, error, etc
-            const lines = log.split('\n');
-            let errorLines = [];
-            let inError = false;
-            for(let i=0; i<lines.length; i++) {
-              const line = lines[i];
-              if(/Execution failed|e: |error:|FAILED|Exception/.test(line)) {
-                // Capture 10 lines before and 20 after
-                const start = Math.max(0, i-10);
-                const end = Math.min(lines.length, i+20);
-                errorLines.push(...lines.slice(start, end));
-                errorLines.push('---');
-                if(errorLines.length > 200) break;
-              }
-            }
-            const errors = errorLines.join('\n').slice(0, 8000);
-            const tail = lines.slice(-100).join('\n');
-            const body = `## Build failed for ${{ github.sha }}\n\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n### Errors (first 8000 chars)\n\`\`\`\n${errors}\n\`\`\`\n\n### Last 100 lines\n\`\`\`\n${tail}\n\`\`\``;
+            // First chunk with errors
+            const errorLines = log.split('\n').filter(l => /e: |error:|FAILED|Execution failed/.test(l)).slice(0, 100).join('\n');
+            let body = `## Build failed ${{ github.sha }}\n\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n### First 100 error lines\n\`\`\`\n${errorLines}\n\`\`\`\n\n### Full log chunk 1/${chunks.length} (first 60000 chars)\n\`\`\`\n${chunks[0].slice(0, 60000)}\n\`\`\``;
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Build failed ${{ github.sha }} - ${{ github.run_id }}`,
               body: body
             });
+            // If more chunks, create additional comments
+            for(let i=1; i<Math.min(chunks.length, 3); i++) {
+              await new Promise(r => setTimeout(r, 1000));
+              try {
+                const issues = await github.rest.issues.listForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: 'open',
+                  per_page: 1
+                });
+                const issue_number = issues.data[0].number;
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue_number,
+                  body: `### Chunk ${i+1}/${chunks.length}\n\`\`\`\n${chunks[i].slice(0, 60000)}\n\`\`\``
+                });
+              } catch(e) {}
+            }
 
       - name: ⬆️ Upload APK
         if: always()
