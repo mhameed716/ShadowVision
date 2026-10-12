@@ -33,47 +33,41 @@ jobs:
       - name: 🔨 Build Debug APK
         id: build
         run: |
-          echo "=== Building Shadow306 Original - APK <50MB, downloads after install ==="
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
           EXIT_CODE=${PIPESTATUS[0]}
-          echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_OUTPUT
-          echo ""
-          echo "=== APKs ==="
-          find app/build -name "*.apk" -type f -exec ls -lh {} \; 2>/dev/null || echo "No APK"
-          echo ""
-          echo "=== Last 50 lines ==="
-          tail -50 /tmp/build.log
-          echo ""
-          echo "=== Errors ==="
-          grep -i -E "error|FAILED|exception|e: " /tmp/build.log | head -30 || echo "No errors grep"
+          echo "EXIT_CODE=$EXIT_CODE"
+          tail -100 /tmp/build.log
           exit $EXIT_CODE
 
-      - name: 📏 Summary on failure
+      - name: 📤 Upload build log to gist on failure
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "## ❌ Build Failed - Shadow306" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Error log" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          grep -i -E "error|FAILED|exception|e: |Execution failed" /tmp/build.log | head -100 >> $GITHUB_STEP_SUMMARY || tail -100 /tmp/build.log >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Full tail" >> $GITHUB_STEP_SUMMARY
+          echo "=== Build failed, creating gist with log ==="
+          # Extract last 200 lines with errors
+          echo "## Build log for ${{ github.sha }}" > /tmp/gist.log
+          echo "" >> /tmp/gist.log
+          echo "### Last 200 lines" >> /tmp/gist.log
+          tail -200 /tmp/build.log >> /tmp/gist.log
+          echo "" >> /tmp/gist.log
+          echo "### Errors" >> /tmp/gist.log
+          grep -i -E "error|FAILED|exception|e: " /tmp/build.log | head -100 >> /tmp/gist.log || echo "No errors found" >> /tmp/gist.log
+          # Create gist
+          gh gist create /tmp/gist.log --public --desc "Shadow306 build log ${{ github.sha }} - ${{ github.run_id }}" || echo "Gist creation failed"
+          # Also print to summary
+          echo "## ❌ Build Failed" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           tail -200 /tmp/build.log >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          # Also create annotation
-          ERROR_MSG=$(grep -i -m1 -E "error|FAILED" /tmp/build.log | head -1 | cut -c1-500)
-          echo "::error::$ERROR_MSG"
 
-      - name: 📏 Summary on success
+      - name: 📏 Summary success
         if: success()
         run: |
-          echo "## ✅ Shadow306 APK Built" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Shadow306 APK Built - Original Design" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Original design: APK <50MB, models download after install, then 100% offline" >> $GITHUB_STEP_SUMMARY
-          echo "Icon: shadow crescent + purple AI dot" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "APK <50MB, models download after install, then 100% offline" >> $GITHUB_STEP_SUMMARY
+          echo "Icon: shadow crescent + purple AI dot adaptive" >> $GITHUB_STEP_SUMMARY
           find app/build -name "*.apk" -type f -exec ls -lh {} \; | while read l; do echo "- $l" >> $GITHUB_STEP_SUMMARY; done
 
       - name: ⬆️ Upload APK
@@ -84,12 +78,3 @@ jobs:
           path: app/build/outputs/apk/**/*.apk
           retention-days: 30
           if-no-files-found: warn
-
-      - name: ⬆️ Upload logs
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: build-logs-${{ github.sha }}
-          path: /tmp/build.log
-          retention-days: 7
-          if-no-files-found: ignore
