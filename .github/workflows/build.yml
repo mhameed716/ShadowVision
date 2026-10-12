@@ -19,7 +19,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: false
 
       - name: 🤖 Setup Android SDK 34
         run: |
@@ -32,35 +31,19 @@ jobs:
 
       - name: 🔨 Build Debug APK
         run: |
-          echo "=== Clean ==="
           rm -rf app/build .gradle
           ./gradlew clean --no-daemon || true
-          echo ""
-          echo "=== Build with rerun-tasks and no cache ==="
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon --rerun-tasks --no-build-cache --no-configuration-cache 2>&1 | tee /tmp/build.log
-          echo ""
-          echo "=== Result ==="
-          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK found"
-          ls -lh app/build/outputs/apk/debug/ 2>&1 || echo "No debug dir"
-          ls -R app/build/ 2>&1 | head -100 || echo "No build dir"
-          tail -100 /tmp/build.log
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon --rerun-tasks --no-build-cache 2>&1 | tee /tmp/build.log
+          echo "=== APKs ==="
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK"
+          ls -R app/build/outputs/ 2>/dev/null | head -30 || echo "No outputs"
+          tail -50 /tmp/build.log
 
       - name: ⬆️ Upload APK
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: Shadow306-APK-${{ github.sha }}
-          path: |
-            app/build/outputs/apk/**/*.apk
-            app/build/**/*.apk
+          path: app/build/outputs/apk/**/*.apk
           retention-days: 30
           if-no-files-found: warn
-
-      - name: ⬆️ Upload logs
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: build-logs-${{ github.sha }}
-          path: /tmp/build.log
-          retention-days: 7
-          if-no-files-found: ignore
