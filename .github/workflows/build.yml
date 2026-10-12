@@ -31,50 +31,24 @@ jobs:
 
       - name: 🔨 Build Debug APK
         run: |
+          set -o pipefail
           rm -rf app/build
-          ./gradlew :app:assembleDebug --stacktrace --info --no-daemon 2>&1 | tee /tmp/build.log
+          echo "=== Building ==="
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
+          EXIT_CODE=${PIPESTATUS[0]}
           echo ""
-          echo "=== Tasks ==="
-          grep -E "assembleDebug|UP-TO-DATE|FROM-CACHE|BUILD SUCCESSFUL|BUILD FAILED" /tmp/build.log | tail -20
+          echo "=== Exit code: $EXIT_CODE ==="
           echo ""
           echo "=== APKs ==="
-          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK"
+          find app/build -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK found - listing build dir"
+          find app/build -type f | head -100 || echo "No build dir at all"
           echo ""
-          echo "=== Outputs ==="
-          ls -R app/build/outputs/ 2>/dev/null | head -50 || echo "No outputs"
-          echo ""
-          echo "=== Intermediates ==="
-          ls app/build/intermediates/ 2>/dev/null | head -20 || echo "No intermediates"
-          echo ""
-          echo "=== Full build file list ==="
-          find app/build -type f 2>/dev/null | head -100 || echo "No build files"
-          echo ""
-          echo "=== Last 50 log ==="
+          echo "=== Last 50 ==="
           tail -50 /tmp/build.log
-
-      - name: 📏 Summary
-        if: always()
-        run: |
-          echo "## Build result" >> $GITHUB_STEP_SUMMARY
-          if find app/build -name "*.apk" -type f | grep -q .; then
-            echo "✅ APK found" >> $GITHUB_STEP_SUMMARY
-            find app/build -name "*.apk" -exec ls -lh {} \; >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ No APK" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            grep -E "assembleDebug|UP-TO-DATE|FROM-CACHE|BUILD" /tmp/build.log | tail -30 >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Build dir:" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            find app/build -type f 2>/dev/null | head -50 >> $GITHUB_STEP_SUMMARY || echo "No build dir" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Last 100 log:" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -100 /tmp/build.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
+          echo ""
+          echo "=== Grep BUILD ==="
+          grep -E "BUILD|assembleDebug|UP-TO-DATE" /tmp/build.log | tail -20
+          exit $EXIT_CODE
 
       - name: ⬆️ Upload APK
         if: always()
