@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -52,15 +53,6 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-Xjvm-default=all",
-        )
-    }
-
-    androidResources {
-        localeFilters += setOf("en", "ar")
-        generateLocaleConfig = true
     }
 
     lint {
