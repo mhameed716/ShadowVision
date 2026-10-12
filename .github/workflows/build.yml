@@ -31,26 +31,52 @@ jobs:
         run: chmod +x gradlew
 
       - name: 🔨 Build Debug APK
+        id: build
         run: |
-          set -o pipefail
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
           EXIT_CODE=${PIPESTATUS[0]}
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo ""
-            echo "=== BUILD FAILED - EXTRACTING ERROR ==="
-            # Find the actual error - look for e: or Execution failed
-            echo "=== First error ==="
-            grep -m1 -A5 -B5 "e: " /tmp/build.log || grep -m1 -A5 -B5 "Execution failed" /tmp/build.log || tail -30 /tmp/build.log
-            echo ""
-            echo "=== Creating annotation with error ==="
-            ERROR_LINE=$(grep -m1 "e: " /tmp/build.log | head -c 1000 || grep -m1 "Execution failed" /tmp/build.log | head -c 1000 || echo "Build failed, see log")
-            echo "::error::$ERROR_LINE"
-            # Also try to output full log tail as warning annotations (multiple)
-            tail -20 /tmp/build.log | while read line; do
-              echo "::warning::$line"
-            done
-          fi
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          tail -100 /tmp/build.log
           exit $EXIT_CODE
+
+      - name: 💬 Comment with error on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let log = '';
+            try {
+              log = fs.readFileSync('/tmp/build.log', 'utf8');
+            } catch(e) {
+              log = 'Could not read log: ' + e.message;
+            }
+            const tail = log.split('\n').slice(-150).join('\n');
+            const errors = log.split('\n').filter(l => /error|FAILED|exception|e: /i.test(l)).slice(0, 50).join('\n');
+            const body = `## ❌ Build Failed for ${{ github.sha }}\n\n### Errors\n\`\`\`\n${errors}\n\`\`\`\n\n### Last 150 lines\n\`\`\`\n${tail}\n\`\`\`\n\n[View run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            // Try to create comment on commit
+            try {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
+                body: body
+              });
+            } catch(e) {
+              console.log('Failed to create commit comment:', e.message);
+              // Try issue comment if PR
+              if(context.payload.pull_request) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: body
+                });
+              }
+            }
+            // Also set summary
+            const summary = `## ❌ Build Failed\n\n\`\`\`\n${tail}\n\`\`\``;
+            await core.summary.addRaw(summary).write();
 
       - name: ⬆️ Upload APK
         if: always()
