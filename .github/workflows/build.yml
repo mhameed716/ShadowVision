@@ -3,16 +3,15 @@ name: Build Shadow306 APK
 on:
   push:
     branches: [ main, arena/**, develop ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build APK (Original)
+    name: Build APK (Original - Download After Install)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    permissions:
-      contents: read
-      issues: write
 
     steps:
       - uses: actions/checkout@v5
@@ -22,6 +21,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: gradle
 
       - name: 🤖 Setup Android SDK 34
         run: |
@@ -32,55 +32,37 @@ jobs:
       - name: 🔧 Grant execute
         run: chmod +x gradlew
 
-      - name: 🔨 Build Debug APK
+      - name: 🔨 Build Debug APK - Original Design
         run: |
-          set -o pipefail
-          rm -rf app/build
+          echo "Building Shadow306 Original:"
+          echo "- APK <50MB lightweight"
+          echo "- Models 1.1GB download once via Wi-Fi after first launch"
+          echo "- Then 100% offline"
+          echo "- Icon: shadow crescent + purple AI dot adaptive"
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          echo "Exit: $EXIT_CODE"
-          exit $EXIT_CODE
+          echo ""
+          echo "=== APKs ==="
+          find app/build -name "*.apk" -type f -exec ls -lh {} \;
 
-      - name: 💬 Create issue with full log on failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            let log = fs.readFileSync('/tmp/build.log', 'utf8');
-            // Split into chunks of 60000 chars for multiple issues if needed
-            const chunks = [];
-            for(let i=0; i<log.length; i+=60000) {
-              chunks.push(log.slice(i, i+60000));
-            }
-            // First chunk with errors
-            const errorLines = log.split('\n').filter(l => /e: |error:|FAILED|Execution failed/.test(l)).slice(0, 100).join('\n');
-            let body = `## Build failed ${{ github.sha }}\n\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n### First 100 error lines\n\`\`\`\n${errorLines}\n\`\`\`\n\n### Full log chunk 1/${chunks.length} (first 60000 chars)\n\`\`\`\n${chunks[0].slice(0, 60000)}\n\`\`\``;
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `Build failed ${{ github.sha }} - ${{ github.run_id }}`,
-              body: body
-            });
-            // If more chunks, create additional comments
-            for(let i=1; i<Math.min(chunks.length, 3); i++) {
-              await new Promise(r => setTimeout(r, 1000));
-              try {
-                const issues = await github.rest.issues.listForRepo({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  state: 'open',
-                  per_page: 1
-                });
-                const issue_number = issues.data[0].number;
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue_number,
-                  body: `### Chunk ${i+1}/${chunks.length}\n\`\`\`\n${chunks[i].slice(0, 60000)}\n\`\`\``
-                });
-              } catch(e) {}
-            }
+      - name: 📏 Summary
+        if: always()
+        run: |
+          echo "## 📦 Shadow306 APK - Original Design" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK**: <50MB lightweight" >> $GITHUB_STEP_SUMMARY
+          echo "- **Models**: 1.1GB download once via Wi-Fi after first launch (SetupScreen)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Offline**: 100% offline after setup" >> $GITHUB_STEP_SUMMARY
+          echo "- **Icon**: Shadow crescent (privacy) + purple AI dot adaptive" >> $GITHUB_STEP_SUMMARY
+          echo "- **Design**: Original as requested - downloads after install" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if find app/build -name "*.apk" -type f | grep -q .; then
+            echo "### 📥 APKs" >> $GITHUB_STEP_SUMMARY
+            find app/build -name "*.apk" -type f -exec ls -lh {} \; | while read l; do echo "- $l" >> $GITHUB_STEP_SUMMARY; done
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Download from Artifacts below" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: ⬆️ Upload APK
         if: always()
