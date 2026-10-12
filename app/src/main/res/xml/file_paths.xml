@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path name="exports" path="exports/" />
+    <files-path name="templates" path="templates/" />
+    <cache-path name="share" path="share/" />
+    <external-media-dir name="media" path="." />
+</paths>

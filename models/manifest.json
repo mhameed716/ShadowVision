@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "packVersion": 1,
+  "createdAt": "2026-10-12T00:00:00Z",
+  "totalBytes": 1105000000,
+  "notes": "Shadow306 offline model pack v1. Contains compressed ONNX models for try-on, face swap, video generation, cloth parsing, inpainting and optional translation. All URLs are placeholders - replace with your CDN in production.",
+  "models": [
+    {
+      "id": "tryon_warp",
+      "fileName": "tryon_warp_fp16.onnx",
+      "displayName": "Try-On Warp",
+      "version": 1,
+      "sizeBytes": 120000000,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "url": "https://models.shadow306.app/tryon_warp_fp16.onnx",
+      "mirrors": [
+        "https://cdn.shadow306.app/models/tryon_warp_fp16.onnx"
+      ],
+      "required": true,
+      "features": ["TRY_ON"],
+      "minRamMb": 3072
+    },
+    {
+      "id": "tryon_synth",
+      "fileName": "tryon_synth_fp16.onnx",
+      "displayName": "Try-On Synthesis",
+      "version": 1,
+      "sizeBytes": 180000000,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "url": "https://models.shadow306.app/tryon_synth_fp16.onnx",
+      "mirrors": [
+        "https://cdn.shadow306.app/models/tryon_synth_fp16.onnx"
+      ],
+      "required": true,
+      "features": ["TRY_ON"],
+      "minRamMb": 3072
+    },
+    {
+      "id": "cloth_parse",
+      "fileName": "cloth_parse_fp16.onnx",
+      "displayName": "Cloth Parsing",
+      "version": 1,
+      "sizeBytes": 45000000,
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "url": "https://models.shadow306.app/cloth_parse_fp16.onnx",
+      "mirrors": [
+        "https://cdn.shadow306.app/models/cloth_parse_fp16.onnx"
+      ],
+      "required": true,
+      "features": ["CLOTH_PARSE", "TRY_ON", "INPAINT"],
+      "minRamMb": 2048
+    },
+    {
+      "id": "inpaint_body",
+      "fileName": "inpaint_body_fp16.onnx",
+      "displayName": "Body Inpaint",
+      "version": 1,
+      "sizeBytes": 150000000,
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "url": "https://models.shadow306.app/inpaint_body_fp16.onnx",
+      "mirrors": [
+        "https://cdn.shadow306.app/models/inpaint_body_fp16.onnx"
+      ],
+      "required": true,
+      "features": ["INPAINT"],
+      "minRamMb": 3072
+    },
+    {
+      "id": "face_det",
+      "fileName": "scrfd_500m_fp16.onnx",
+      "displayName": "Face Detection (SCRFD)",
+      "version": 1,
+      "sizeBytes": 20000000,
+      "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "url": "https://models.shadow306.app/scrfd_500m_fp16.onnx",
+      "mirrors": [
+        "https://cdn.shadow306.app/models/scrfd_500m_fp16.onnx"
+      ],
+      "required": true,
+      "features": ["FACE_SWAP"],
+      "minRamMb": 2048
+    },
+    {
+      "id": "face_swap",
+      "fileName": "inswapper_128_fp16.onnx",
+      "displayName": "Face Swap (Inswapper)",
+      "version": 1,
+      "sizeBytes": 180000000,
+      "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "url": "https://models.shadow306.app/inswapper_128_fp16.onnx",
+      "mirrors": [
+        "https://cdn.shadow306.app/models/inswapper_128_fp16.onnx"
+      ],
+      "required": true,
+      "features": ["FACE_SWAP"],
+      "minRamMb": 3072
+    },
+    {
+      "id": "video_gen",
+      "fileName": "video_gen_fp16.onnx",
+      "displayName": "Video Generation",
+      "version": 1,
+      "sizeBytes": 350000000,
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "url": "https://models.shadow306.app/video_gen_fp16.onnx",
+      "mirrors": [
+        "https://cdn.shadow306.app/models/video_gen_fp16.onnx"
+      ],
+      "required": true,
+      "features": ["VIDEO_GEN"],
+      "minRamMb": 4096
+    },
+    {
+      "id": "translate_ar_en",
+      "fileName": "translate_ar_en_fp16.onnx",
+      "displayName": "Arabic to English Translator",
+      "version": 1,
+      "sizeBytes": 60000000,
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "url": "https://models.shadow306.app/translate_ar_en_fp16.onnx",
+      "mirrors": [
+        "https://cdn.shadow306.app/models/translate_ar_en_fp16.onnx"
+      ],
+      "required": false,
+      "features": ["TRANSLATE", "VIDEO_GEN"],
+      "minRamMb": 2048
+    }
+  ]
+}

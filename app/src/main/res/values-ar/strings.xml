@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Shadow306</string>
+    <string name="app_tagline">استوديو ذكاء اصطناعي على جهازك — يعمل بالكامل بدون إنترنت</string>
+
+    <!-- Common -->
+    <string name="action_back">رجوع</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_retry">إعادة المحاولة</string>
+    <string name="action_save">حفظ</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_continue">متابعة</string>
+    <string name="action_close">إغلاق</string>
+    <string name="action_pick_image">اختيار صورة</string>
+    <string name="action_replace">تغيير</string>
+    <string name="action_clear">مسح</string>
+    <string name="state_processing">جارٍ المعالجة على جهازك…</string>
+    <string name="state_saved">تم الحفظ في مجلد Shadow306</string>
+    <string name="unknown_error">حدث خطأ ما، يرجى المحاولة مرة أخرى.</string>
+
+    <!-- Engine status -->
+    <string name="engine_ready">محرك الذكاء الاصطناعي جاهز</string>
+    <string name="engine_ready_short">جاهز</string>
+    <string name="engine_fallback_short">وضع المعاينة</string>
+    <string name="engine_downloading_short">جارٍ التنزيل</string>
+    <string name="engine_queued_short">في الانتظار</string>
+    <string name="engine_missing_short">النموذج غير مثبت</string>
+    <string name="engine_fallback_explainer">نموذج هذه الأداة لم يُثبَّت بعد. يستخدم التطبيق حالياً المعالج الاحتياطي المدمج: النتائج سريعة لكنها تقريبية. أكمل تنزيل النماذج للحصول على الجودة الكاملة.</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_tryon">تغيير الملابس</string>
+    <string name="nav_faceswap">تبديل الوجوه</string>
+    <string name="nav_video">الفيديو</string>
+    <string name="nav_templates">القوالب</string>
+    <string name="nav_removal">إزالة الملابس</string>
+
+    <!-- Home -->
+    <string name="home_title">Shadow306</string>
+    <string name="home_subtitle">كل شيء يعمل داخل هاتفك. لا رفع، لا سحابة.</string>
+    <string name="home_models_card">حزمة النماذج</string>
+    <string name="home_models_ready">تم تثبيت %1$d نموذج · %2$s</string>
+    <string name="home_models_pending">تم تثبيت %1$d من %2$d نموذج</string>
+    <string name="home_tool_tryon">تغيير الملابس</string>
+    <string name="home_tool_tryon_desc">تركيب أي قطعة ملابس على صورة جسم كامل</string>
+    <string name="home_tool_faceswap">تبديل الوجوه</string>
+    <string name="home_tool_faceswap_desc">دمج وجه على الصورة الهدف بسلاسة</string>
+    <string name="home_tool_video">توليد الفيديو</string>
+    <string name="home_tool_video_desc">تحريك صورة بالوصف بالعربية أو الإنجليزية</string>
+    <string name="home_tool_templates">القوالب</string>
+    <string name="home_tool_templates_desc">أضف قوالب ملابسك الخاصة</string>
+    <string name="home_tool_removal">إزالة الملابس</string>
+    <string name="home_tool_removal_desc">عزل الملابس ومسحها وتعبئة الفراغات</string>
+    <string name="home_privacy_note">الصور لا تخرج من هذا الجهاز أبداً.</string>
+
+    <!-- Setup / model download -->
+    <string name="setup_title">الإعداد لمرة واحدة</string>
+    <string name="setup_subtitle">ينزّل Shadow306 نماذجه مرة واحدة، ثم يعمل بدون أي إنترنت.</string>
+    <string name="setup_size_label">حجم التنزيل: %1$s</string>
+    <string name="setup_free_space">المساحة المتاحة: %1$s</string>
+    <string name="setup_space_warning">تحتاج نحو %1$s من المساحة الحرة. أفرغ بعض المساحة أو تابع بوضع المعاينة والتنزيل لاحقاً.</string>
+    <string name="setup_wifi_required">اتصل بشبكة Wi-Fi لتنزيل حزمة النماذج.</string>
+    <string name="setup_wifi_connected">متصل بشبكة Wi-Fi</string>
+    <string name="setup_start">تنزيل النماذج</string>
+    <string name="setup_resume">استئناف التنزيل</string>
+    <string name="setup_pause">إيقاف مؤقت</string>
+    <string name="setup_skipping">المتابعة بوضع المعاينة</string>
+    <string name="setup_done">اكتمل الإعداد</string>
+    <string name="setup_done_body">تم تثبيت حزمة النماذج. التطبيق الآن يعمل بالكامل بدون إنترنت.</string>
+    <string name="setup_enter_studio">فتح الاستوديو</string>
+    <string name="setup_downloading_body">جارٍ تنزيل %1$s · %2$s/ث</string>
+    <string name="setup_eta">تبقّى نحو %1$s</string>
+    <string name="setup_verifying">جارٍ التحقق من سلامة الملفات…</string>
+    <string name="setup_waiting_wifi">في انتظار اتصال Wi-Fi غير محدود…</string>
+    <string name="setup_use_mobile_data">التنزيل عبر بيانات الجوال على أي حال</string>
+    <string name="setup_sideload_title">وُجدت نماذج على هذا الجهاز</string>
+    <string name="setup_sideload_body">عثرنا على مجلد نماذج Shadow306 منسوخاً في ذاكرة الجهاز. هل تريد استيراده بدلاً من التنزيل؟</string>
+    <string name="setup_sideload_action">استيراد من الذاكرة</string>
+    <string name="setup_error_network">فشل التنزيل. تحقق من الاتصال وحاول مرة أخرى.</string>
+    <string name="setup_error_checksum">أحد الملفات تالف. سيتم تنزيله من جديد تلقائياً.</string>
+    <string name="setup_error_space">لا توجد مساحة تخزين كافية.</string>
+    <string name="setup_notification_title">جارٍ تنزيل نماذج الذكاء الاصطناعي</string>
+    <string name="setup_notification_text">%1$d%% · %2$s من %3$s</string>
+    <string name="setup_airgapped_title">الشبكة مقفلة</string>
+    <string name="setup_airgapped_body">قفل العزل مُفعّل، لذلك لا يمكن جلب النماذج. أوقفه من الإعدادات للتنزيل.</string>
+
+    <!-- Try-On -->
+    <string name="tryon_title">تغيير الملابس</string>
+    <string name="tryon_person">١ · صورة الشخص</string>
+    <string name="tryon_person_hint">جسم كامل، مواجه للكاميرا، إضاءة جيدة</string>
+    <string name="tryon_garment">٢ · قطعة الملابس</string>
+    <string name="tryon_garment_hint">اختر قالباً أو استورد صورتك</string>
+    <string name="tryon_options">الخيارات</string>
+    <string name="tryon_fit">شدة الالتصاق بالجسم</string>
+    <string name="tryon_shadow">مطابقة الظلال والإضاءة</string>
+    <string name="tryon_keep_pose">الحفاظ على وضعية الجسم</string>
+    <string name="tryon_generate">تركيب القطعة</string>
+    <string name="tryon_result">النتيجة</string>
+    <string name="tryon_need_both">اختر صورة شخص وقطعة ملابس أولاً.</string>
+    <string name="tryon_before">قبل</string>
+    <string name="tryon_after">بعد</string>
+
+    <!-- Face swap -->
+    <string name="faceswap_title">تبديل الوجوه</string>
+    <string name="faceswap_target">الصورة الهدف</string>
+    <string name="faceswap_target_hint">الصورة التي ستستقبل الوجه</string>
+    <string name="faceswap_source">الوجه المصدر</string>
+    <string name="faceswap_source_hint">الوجه الذي تريد استخدامه</string>
+    <string name="faceswap_options">الخيارات</string>
+    <string name="faceswap_color_match">مطابقة اللون والإضاءة</string>
+    <string name="faceswap_feather">نعومة الحواف</string>
+    <string name="faceswap_preserve_shape">الحفاظ على شكل وجه الهدف</string>
+    <string name="faceswap_swap">تبديل الوجوه</string>
+    <string name="faceswap_need_both">اختر صورة هدف ووجهاً مصدراً.</string>
+
+    <!-- Video -->
+    <string name="video_title">توليد الفيديو</string>
+    <string name="video_source">الصورة المصدر</string>
+    <string name="video_prompt">اوصف الحركة</string>
+    <string name="video_prompt_hint">مثال: اقتراب سينمائي بطيء، والفستان يطير مع الريح</string>
+    <string name="video_prompt_lang">لغة الوصف</string>
+    <string name="video_prompt_lang_auto">تلقائي</string>
+    <string name="video_translated">الترجمة للنموذج المحلي: «%1$s»</string>
+    <string name="video_duration">المدة</string>
+    <string name="video_seconds">%1$d ثانية</string>
+    <string name="video_motion">قوة الحركة</string>
+    <string name="video_quality">الجودة</string>
+    <string name="video_generate">توليد الفيديو</string>
+    <string name="video_stage_prepare">تحضير الإطارات</string>
+    <string name="video_stage_generate">توليد %1$d إطاراً أساسياً</string>
+    <string name="video_stage_interpolate">زيادة الإطارات إلى %1$d إطار/ث</string>
+    <string name="video_stage_extend">التمديد إلى %1$d ثانية</string>
+    <string name="video_stage_encode">ترميز ملف MP4</string>
+    <string name="video_result_ready">المقطع جاهز</string>
+    <string name="video_result_meta">%1$s · %2$d إطار/ث · %3$s</string>
+    <string name="video_need_image">اختر صورة المصدر أولاً.</string>
+    <string name="video_need_prompt">اكتب وصفاً قصيراً للحركة.</string>
+    <string name="video_open">فتح</string>
+    <string name="video_trick_explainer">يولّد النموذج المحلي مقطعاً أساسياً مدته %1$d ثوانٍ، ثم يمدّه التدوير الذكي وتمديد الإطارات إلى %2$d ثانية بدون أي اتصال بالإنترنت.</string>
+
+    <!-- Templates -->
+    <string name="templates_title">القوالب</string>
+    <string name="templates_subtitle">القوالب التي تستوردها تُحفظ داخل التطبيق وتعمل بدون إنترنت.</string>
+    <string name="templates_add">إضافة من المعرض</string>
+    <string name="templates_empty">لا توجد قوالب مخصصة بعد</string>
+    <string name="templates_empty_body">استورد صورة قطعة ملابس (صورة PNG بخلفية نظيفة تعطي أفضل نتيجة).</string>
+    <string name="templates_builtin">القوالب المدمجة</string>
+    <string name="templates_mine">قوالبي</string>
+    <string name="templates_delete_title">حذف القالب؟</string>
+    <string name="templates_delete_body">سيتم حذف «%1$s» من هذا الجهاز.</string>
+    <string name="templates_added">تمت إضافة القالب</string>
+    <string name="templates_duplicate">هذه الصورة موجودة بالفعل في قوالبي.</string>
+    <string name="templates_unsupported">تعذّر قراءة هذا الملف كصورة.</string>
+    <string name="templates_name_label">اسم القالب</string>
+    <string name="templates_category">التصنيف</string>
+    <string name="templates_use">استخدام في تغيير الملابس</string>
+    <string name="templates_count">%1$d عنصر</string>
+
+    <!-- Garment removal -->
+    <string name="removal_title">إزالة الملابس</string>
+    <string name="removal_source">الصورة</string>
+    <string name="removal_auto">كشف الملابس تلقائياً</string>
+    <string name="removal_mask_strength">حساسية الكشف</string>
+    <string name="removal_brush">فرشاة اللمس</string>
+    <string name="removal_brush_hint">لوّن على الملابس لإضافتها، أو على الجلد لإزالتها</string>
+    <string name="removal_skin_match">مطابقة لون البشرة والإضاءة</string>
+    <string name="removal_smooth">نعومة التعبئة</string>
+    <string name="removal_run">إزالة وتعبئة</string>
+    <string name="removal_need_image">اختر صورة أولاً.</string>
+    <string name="removal_mask_preview">قناع الملابس المكتشف</string>
+
+    <!-- Settings -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_language_ar">العربية</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_engine">محرك المعالجة</string>
+    <string name="settings_engine_auto">تلقائي (أفضل محرك متاح)</string>
+    <string name="settings_engine_onnx">إجبار النماذج العصبونية</string>
+    <string name="settings_engine_fallback">إجبار المعالج الاحتياطي</string>
+    <string name="settings_models">حزمة النماذج</string>
+    <string name="settings_models_verify">التحقق من النماذج</string>
+    <string name="settings_models_update">البحث عن تحديثات</string>
+    <string name="settings_models_delete">حذف كل النماذج</string>
+    <string name="settings_models_delete_confirm">حذف %1$s من النماذج؟ سيعود التطبيق إلى وضع المعاينة.</string>
+    <string name="settings_storage_used">تستخدم النماذج %1$s على هذا الجهاز</string>
+    <string name="settings_airgap">قفل العزل الشبكي</string>
+    <string name="settings_airgap_body">حظر أي اتصال بالشبكة، بما في ذلك تنزيل النماذج.</string>
+    <string name="settings_metered">السماح بالتنزيل عبر بيانات الجوال</string>
+    <string name="settings_about">حول التطبيق</string>
+    <string name="settings_version">الإصدار %1$s (%2$d)</string>
+    <string name="settings_privacy">الخصوصية</string>
+    <string name="settings_privacy_body">تتم كل المعالجة على هذا الجهاز. الصور والوصف والنتائج تُخزَّن فقط في المساحة الخاصة بالتطبيق.</string>
+</resources>

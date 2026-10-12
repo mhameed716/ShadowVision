@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext is banned in every build variant: the model pack is fetched over TLS
+  from the hosts listed below, and nothing else is ever contacted.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">models.shadow306.app</domain>
+        <domain includeSubdomains="true">cdn.shadow306.app</domain>
+    </domain-config>
+</network-security-config>

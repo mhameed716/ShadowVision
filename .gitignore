@@ -1,0 +1,42 @@
+# Gradle
+.gradle/
+build/
+**/build/
+local.properties
+*.ap_
+*.aab
+*.apk
+
+# Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+captures/
+.externalNativeBuild/
+.cxx/
+*.hprof
+
+# Models (large binaries) - keep manifest.json but ignore .onnx
+**/*.onnx
+**/*.onnx.tmp
+**/models/*.onnx
+app/src/main/assets/models/*.onnx
+models/*.onnx
+# Keep manifest
+!**/manifest.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# User templates and exports (local)
+app/src/main/assets/templates/
+**/exports/
+
+# Keystore
+*.jks
+*.keystore
+
+# Arena / sandbox
+.arena/

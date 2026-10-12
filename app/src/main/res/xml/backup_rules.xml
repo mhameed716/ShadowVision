@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Only tiny, non-sensitive preferences travel to the cloud. Model weights and user
+  media live in noBackupFilesDir / internal storage and are never backed up.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="." />
+    <include domain="database" path="shadow306.db" />
+    <exclude domain="file" path="models/" />
+    <exclude domain="file" path="templates/" />
+    <exclude domain="file" path="exports/" />
+</full-backup-content>

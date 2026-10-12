@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Wordmark-free glyph: a crescent "shadow" cut out of a rounded square.
+  Drawn as a vector so no binary assets are needed in the repository.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,20C35.2,20 20,35.2 20,54s15.2,34 34,34c3.4,0 6.7,-0.5 9.8,-1.4C49.6,82.9 42,71.3 42,58c0,-13.4 7.6,-24.9 18.8,-30.7C58.6,23.5 56.4,20 54,20z" />
+    <path
+        android:fillColor="#FF7C5CFF"
+        android:pathData="M74,34m-11,0a11,11 0,1 1,22 0a11,11 0,1 1,-22 0" />
+</vector>
