@@ -32,6 +32,7 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager --install "platform-tools" "platforms;android-35" "platforms;android-34" "build-tools;35.0.0" "build-tools;34.0.0" || true
           yes | sdkmanager --licenses || true
+          echo "SDK installed:"
           sdkmanager --list_installed | grep -E "platforms;android|build-tools" || true
 
       - name: 📦 Cache Gradle
@@ -50,85 +51,83 @@ jobs:
       - name: ✅ Verify manifest
         run: |
           python3 tools/verify_manifest.py app/src/main/assets/models/manifest.json
-          ls -lh app/src/main/assets/models/
-          echo "Total models size: $(du -sh app/src/main/assets/models/ | cut -f1)"
+          echo "Models:"
+          ls -lh app/src/main/assets/models/ | head -20
+          du -sh app/src/main/assets/models/
 
-      - name: 📊 Environment & Tasks
+      - name: 📊 List available tasks
         run: |
-          java -version
-          ./gradlew --version
+          echo "=== Available tasks ==="
+          ./gradlew tasks --all 2>&1 | grep -E "assemble" | head -30
           echo ""
-          echo "=== Available assemble tasks ==="
-          ./gradlew tasks --all | grep -i assemble | head -30
-          echo ""
-          echo "=== Flavors ==="
-          ./gradlew tasks --all | grep -E "standard|bundled" | head -20
+          echo "=== Build files ==="
+          ls -lh app/build.gradle.kts gradle/libs.versions.toml
 
-      - name: 🔨 Build APKs (try all variants)
+      - name: 🔨 Build Debug APK
         run: |
-          echo "=== Building Standard Debug ==="
-          ./gradlew :app:assembleStandardDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build-standard.log | tail -50
+          echo "=== Building Debug APK ==="
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon --no-configuration-cache 2>&1 | tee /tmp/build.log
           echo ""
-          echo "=== Building Bundled Debug ==="
-          ./gradlew :app:assembleBundledDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build-bundled.log | tail -50
+          echo "=== Build finished, exit code: ${PIPESTATUS[0]} ==="
           echo ""
-          echo "=== Trying generic assembleDebug as fallback ==="
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build-generic.log | tail -50 || true
+          echo "=== Searching for APKs ==="
+          find . -name "*.apk" -type f 2>/dev/null | head -20
           echo ""
-          echo "=== All APKs found ==="
-          find . -name "*.apk" -type f 2>/dev/null | xargs ls -lh 2>/dev/null || echo "No APK found yet"
+          echo "=== App build outputs ==="
+          ls -R app/build/outputs/ 2>/dev/null | head -50 || echo "No outputs"
           echo ""
-          echo "=== Build outputs ==="
-          find app/build -type f 2>/dev/null | head -30 || echo "No build dir"
+          echo "=== Full build directory ==="
+          find app/build -type f 2>/dev/null | head -50 || echo "No build dir"
           echo ""
-          echo "=== Build logs tail ==="
-          cat /tmp/build-standard.log | grep -E "FAILED|SUCCESS|error|Error" | tail -20 || true
+          echo "=== Last 30 lines of build log ==="
+          tail -30 /tmp/build.log
 
       - name: 📏 APK Summary
         if: always()
         run: |
-          echo "## 📦 APK Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Shadow306 APK Build" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          APK_FOUND=false
+          echo "### Build Info" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- JDK: 17" >> $GITHUB_STEP_SUMMARY
+          echo "- SDK: 35" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
           if find app/build -name "*.apk" -type f 2>/dev/null | grep -q .; then
-            APK_FOUND=true
-            echo "### ✅ APKs Built Successfully" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ APKs Found" >> $GITHUB_STEP_SUMMARY
             find app/build -name "*.apk" -type f -exec ls -lh {} \; | while read line; do
               echo "- $line" >> $GITHUB_STEP_SUMMARY
             done
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📊 Sizes" >> $GITHUB_STEP_SUMMARY
-            find app/build -name "*.apk" -type f -exec du -h {} \; | while read line; do
-              echo "- $line" >> $GITHUB_STEP_SUMMARY
-            done
-          else
-            echo "### ⚠️ No APK found" >> $GITHUB_STEP_SUMMARY
-            echo "Checking build directory..." >> $GITHUB_STEP_SUMMARY
+            echo "### 📱 Installation" >> $GITHUB_STEP_SUMMARY
+            echo '```bash' >> $GITHUB_STEP_SUMMARY
+            echo "adb install app-debug.apk" >> $GITHUB_STEP_SUMMARY
+            echo "# Or drag APK to phone and install" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            find app/build -type f 2>/dev/null | head -30 >> $GITHUB_STEP_SUMMARY || echo "No build directory" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ No APK Found" >> $GITHUB_STEP_SUMMARY
+            echo "Build directory contents:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            find app/build -type f 2>/dev/null | head -50 >> $GITHUB_STEP_SUMMARY || echo "No build dir" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Build logs (last 50 lines)" >> $GITHUB_STEP_SUMMARY
+            echo "Last 50 lines of build log:" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            cat /tmp/build-standard.log | tail -50 >> $GITHUB_STEP_SUMMARY || true
+            tail -50 /tmp/build.log >> $GITHUB_STEP_SUMMARY || true
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📱 Installation" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "adb install app-standard-debug.apk" >> $GITHUB_STEP_SUMMARY
-          echo "adb install app-bundled-debug.apk  # With models, 100% offline" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: ⬆️ Upload APKs
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: Shadow306-APKs-${{ github.sha }}
+          name: Shadow306-APK-${{ github.sha }}
           path: |
             app/build/outputs/apk/**/*.apk
             app/build/outputs/**/*.apk
             **/build/outputs/apk/**/*.apk
+            app/build/**/*.apk
           retention-days: 30
           compression-level: 0
           if-no-files-found: warn
@@ -139,7 +138,7 @@ jobs:
         with:
           name: build-logs-${{ github.sha }}
           path: |
-            /tmp/build-*.log
+            /tmp/build.log
             app/build/reports/
             app/build/outputs/logs/
           retention-days: 7

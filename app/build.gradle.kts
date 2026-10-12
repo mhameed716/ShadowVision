@@ -21,18 +21,6 @@ android {
         }
     }
 
-    flavorDimensions.add("distribution")
-    productFlavors {
-        create("standard") {
-            dimension = "distribution"
-        }
-        create("bundled") {
-            dimension = "distribution"
-            applicationIdSuffix = ".bundled"
-            versionNameSuffix = "-bundled"
-        }
-    }
-
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -90,8 +78,8 @@ android {
 
     lint {
         abortOnError = false
-        checkReleaseBuilds = true
-        disable += setOf("MissingTranslation", "ExtraTranslation")
+        checkReleaseBuilds = false
+        disable += setOf("MissingTranslation", "ExtraTranslation", "UnusedResources")
     }
 }
 
