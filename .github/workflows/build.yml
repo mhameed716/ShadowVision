@@ -32,35 +32,25 @@ jobs:
 
       - name: 🔨 Build Debug APK
         run: |
+          set -o pipefail
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/build.log
           EXIT_CODE=${PIPESTATUS[0]}
-          echo "=== EXIT $EXIT_CODE ==="
-          tail -100 /tmp/build.log
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo ""
+            echo "=== BUILD FAILED - EXTRACTING ERROR ==="
+            # Find the actual error - look for e: or Execution failed
+            echo "=== First error ==="
+            grep -m1 -A5 -B5 "e: " /tmp/build.log || grep -m1 -A5 -B5 "Execution failed" /tmp/build.log || tail -30 /tmp/build.log
+            echo ""
+            echo "=== Creating annotation with error ==="
+            ERROR_LINE=$(grep -m1 "e: " /tmp/build.log | head -c 1000 || grep -m1 "Execution failed" /tmp/build.log | head -c 1000 || echo "Build failed, see log")
+            echo "::error::$ERROR_LINE"
+            # Also try to output full log tail as warning annotations (multiple)
+            tail -20 /tmp/build.log | while read line; do
+              echo "::warning::$line"
+            done
+          fi
           exit $EXIT_CODE
-
-      - name: 📤 Save log via API on failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "Saving log via GitHub API"
-          # Encode log as base64
-          base64 -w 0 /tmp/build.log > /tmp/b64.log || base64 /tmp/build.log > /tmp/b64.log
-          # Create file in repo via API on a new branch
-          # First get current commit sha
-          SHA=$(git rev-parse HEAD)
-          echo "Current SHA: $SHA"
-          # Try to create file via API
-          gh api repos/mhameed716/ShadowVision/contents/build-failure-${{ github.sha }}.log \
-            -f message="build log ${{ github.sha }}" \
-            -f content="$(cat /tmp/b64.log)" \
-            -f branch="arena/529f00d7-shadowvision" \
-            --method PUT || echo "API create failed"
-          # Also try to update summary with full log
-          echo "## ❌ Build Failed" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -300 /tmp/build.log >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: ⬆️ Upload APK
         if: always()
